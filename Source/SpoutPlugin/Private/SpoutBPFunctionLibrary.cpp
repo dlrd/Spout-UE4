@@ -198,6 +198,7 @@ FSenderStruct* RegisterReceiver(FName spoutName){
 	newFSenderStruc->sharedResource = nullptr;
 	newFSenderStruc->rView = nullptr;
 	newFSenderStruc->texTemp = NULL;
+	newFSenderStruc->frame = nullptr;// Smode Tech no frame counter on receiver
 
 	//TextureColor = new
 	UE_LOG(SpoutUELog, Warning, TEXT("No material instance, creating...//////"));
@@ -353,6 +354,13 @@ bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Textur
 	newFSenderStruc->MaterialInstanceColor = nullptr;
 	newFSenderStruc->TextureColor = nullptr;
 
+	// Smode Tech frame counter
+	newFSenderStruc->frame = new spoutFrameCount();
+	bool frameResult = newFSenderStruc->frame->CreateAccessMutex(TCHAR_TO_ANSI(*spoutName.ToString()));
+	if (!frameResult)
+		UE_LOG(SpoutUELog, Warning, TEXT("CreateAccessMutex failure: %s"), *tmp);
+	newFSenderStruc->frame->EnableFrameCount(TCHAR_TO_ANSI(*spoutName.ToString()));
+
 	FSenders.Add(*newFSenderStruc);
 
 	return senderResult;
@@ -476,11 +484,19 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 		UE_LOG(SpoutUELog, Warning, TEXT("targetTex is null"));
 		return false;
 	}
+  auto* frame = SenderStruct->frame; // SmodeTech
 	
 	ENQUEUE_RENDER_COMMAND(void)(
-		[targetTex, baseTexture](FRHICommandListImmediate& RHICmdList) {
-			g_pImmediateContext->CopyResource(targetTex, baseTexture);
-			g_pImmediateContext->Flush();
+		[targetTex, baseTexture, frame](FRHICommandListImmediate& RHICmdList)
+		{
+			// Smode Tech frame counter based copy
+			if (frame->CheckTextureAccess(targetTex))
+			{
+				g_pImmediateContext->CopyResource(targetTex, baseTexture);
+				g_pImmediateContext->Flush();
+				frame->SetNewFrame();
+				frame->AllowTextureAccess(targetTex);
+			}
 		});
 	
 	D3D11_TEXTURE2D_DESC td;
@@ -634,6 +650,13 @@ void USpoutBPFunctionLibrary::CloseSender(FName spoutName)
 			sender->ReleaseSenderName(TCHAR_TO_ANSI(*spoutName.ToString()));
 			UE_LOG(SpoutUELog, Warning, TEXT("Sender %s released"), *spoutName.GetPlainNameString());
 			
+			// Smode Tech frame counter cleanup
+			if (tempSenderStruct->frame)
+			{
+				delete tempSenderStruct->frame;
+				tempSenderStruct->frame = nullptr;
+			}
+
 		}
 		else {
 			UE_LOG(SpoutUELog, Warning, TEXT("Receiver always listening"));

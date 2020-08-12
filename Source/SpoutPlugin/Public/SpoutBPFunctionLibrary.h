@@ -78,6 +78,7 @@ struct FSenderStruct
 		ID3D11Resource * sharedResource;
 		ID3D11ShaderResourceView * rView;
 		ID3D11Texture2D* texTemp;
+		spoutFrameCount* frame; // Smode Tech frame counter
 
 	void SetName(FName NewsName)
 	{
