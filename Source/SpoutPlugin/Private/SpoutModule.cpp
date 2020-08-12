@@ -3,10 +3,10 @@
 #include "SpoutPluginPrivatePCH.h"
 
 #include "Core.h"
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h"
 //#include "IPluginManager.h"
 
-DEFINE_LOG_CATEGORY(SpoutLog);
+DEFINE_LOG_CATEGORY(SpoutUELog);
 
 #define LOCTEXT_NAMESPACE "FSpoutModule"
 
@@ -32,7 +32,7 @@ void FSpoutModule::StartupModule()
 
 	if (ExampleLibraryHandle)
 	{
-		UE_LOG(SpoutLog, Warning, TEXT("Modulo Spout Cargado"));
+		UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Cargado"));
 		// Call the test function in the third party library that opens a message box
 		//ExampleLibraryFunction();
 	}
@@ -40,7 +40,7 @@ void FSpoutModule::StartupModule()
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ThirdPartyLibraryError", "Failed to load example third party library"));
 	}*/
-	UE_LOG(SpoutLog, Warning, TEXT("Modulo Spout Cargado"));
+	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Cargado"));
 }
 
 void FSpoutModule::ShutdownModule()
@@ -52,7 +52,7 @@ void FSpoutModule::ShutdownModule()
 	/*FPlatformProcess::FreeDllHandle(ExampleLibraryHandle);
 	ExampleLibraryHandle = nullptr;*/
 	
-	UE_LOG(SpoutLog, Warning, TEXT("Modulo Spout Descargado"));
+	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Descargado"));
 }
 
 

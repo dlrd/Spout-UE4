@@ -59,7 +59,8 @@ namespace UnrealBuildTool.Rules
             PublicIncludePaths.AddRange(
                 new string[] {
                     Path.Combine(ModuleDirectory, "Public"),
-                    Path.Combine(ThirdPartyPath, "Spout/include")
+                    // SMODE TECH Embedd Spout code and do not link on external Spout Library
+                    // Path.Combine(ThirdPartyPath, "Spout/include")
                     
                     // ... add public include paths required here ...
                 }
@@ -108,15 +109,16 @@ namespace UnrealBuildTool.Rules
             // https://answers.unrealengine.com/questions/842286/specify-dll-location-using-plugin-in-cooked-projec.html
             if ((Target.Platform == UnrealTargetPlatform.Win64) || (Target.Platform == UnrealTargetPlatform.Win32))
             {
-                string PlatformString = (Target.Platform == UnrealTargetPlatform.Win64) ? "amd64" : "x86";
+            // SMODE TECH: Do not link on external Spout library anymore
+            //    string PlatformString = (Target.Platform == UnrealTargetPlatform.Win64) ? "amd64" : "x86";
 
-                PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Spout", "include"));
-                PublicAdditionalLibraries.Add(Path.Combine(ThirdPartyPath, "Spout", "lib", PlatformString, "Spout.lib"));
+            //    PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "Spout", "include"));
+            //    PublicAdditionalLibraries.Add(Path.Combine(ThirdPartyPath, "Spout", "lib", PlatformString, "SpoutLibrary.lib"));
 
-                string pluginDLLPath = Path.Combine(ThirdPartyPath, "Spout", "lib", PlatformString, "Spout.dll");
-                string binariesPath = CopyToProjectBinaries(pluginDLLPath, Target);
-                System.Console.WriteLine("Using Spout DLL: " + binariesPath);
-                RuntimeDependencies.Add(binariesPath);
+            //    string pluginDLLPath = Path.Combine(ThirdPartyPath, "Spout", "lib", PlatformString, "SpoutLibrary.dll");
+            //    string binariesPath = CopyToProjectBinaries(pluginDLLPath, Target);
+            //    System.Console.WriteLine("Using Spout DLL: " + binariesPath);
+            //    RuntimeDependencies.Add(binariesPath);
             }
         }
     }

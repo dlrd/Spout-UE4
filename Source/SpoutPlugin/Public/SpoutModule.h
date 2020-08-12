@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "ModuleManager.h"
+#include "Modules/ModuleManager.h" // SMODE TECH, Fix UE 4.25
 
-DECLARE_LOG_CATEGORY_EXTERN(SpoutLog, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(SpoutUELog, Log, All);
 
 class FSpoutModule : public IModuleInterface
 {
