@@ -1,5 +1,6 @@
-#include "SpoutPluginPrivatePCH.h"
 #include "../Public/SpoutBPFunctionLibrary.h"
+#include "SpoutPluginPrivatePCH.h"
+#include "../Public/SpoutModule.h"
 
 #include <string>
 #include <iostream>
@@ -9,19 +10,42 @@
 #pragma comment(lib, "opengl32.lib") // SMODE TECH, Link directly with OpenGL
 
 static ID3D11Device* g_D3D11Device;
-ID3D11DeviceContext* g_pImmediateContext = NULL;
+static ID3D11DeviceContext* g_pImmediateContext = NULL;
 
-spoutSenderNames * sender;
-spoutGLDXinterop * interop;
-spoutDirectX * sdx;
+static spoutSenderNames * sender;
+//static spoutGLDXinterop * interop; // Smode Tech useless
+static spoutDirectX * sdx;
 
-TArray<FSenderStruct> FSenders;
+static TArray<FSenderStruct> FSenders;
 
-UMaterialInterface* BaseMaterial;
+static UMaterialInterface* BaseMaterial;
 
-FName TextureParameterName = "SpoutTexture";
+static FName TextureParameterName = "SpoutTexture";
 
 
+void FSpoutModule::ShutdownModule()
+{
+	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
+	// we call this function before unloading the module.
+	
+	// Free the dll handle
+	/*FPlatformProcess::FreeDllHandle(ExampleLibraryHandle);
+	ExampleLibraryHandle = nullptr;*/
+
+	FSenders.Init({}, 0);
+	if (sender)
+	{
+		delete sender;
+		sender = nullptr;
+	}
+	if (sdx)
+	{
+		delete sdx;
+		sdx = nullptr;
+	}
+
+	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Descargado"));
+}
 
 
 void DestroyTexture(UTexture2D*& Texture)
@@ -123,7 +147,7 @@ void initSpout()
 	UE_LOG(SpoutUELog, Warning, TEXT("-----------> Init Spout"));
 	
 	sender = new spoutSenderNames;
-	interop = new spoutGLDXinterop;
+	// interop = new spoutGLDXinterop; // SMODE TECH useless
 	sdx = new spoutDirectX;
 }
 

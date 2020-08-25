@@ -43,17 +43,17 @@ void FSpoutModule::StartupModule()
 	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Cargado"));
 }
 
-void FSpoutModule::ShutdownModule()
-{
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
-	
-	// Free the dll handle
-	/*FPlatformProcess::FreeDllHandle(ExampleLibraryHandle);
-	ExampleLibraryHandle = nullptr;*/
-	
-	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Descargado"));
-}
+//void FSpoutModule::ShutdownModule()
+//{
+//	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
+//	// we call this function before unloading the module.
+//	
+//	// Free the dll handle
+//	/*FPlatformProcess::FreeDllHandle(ExampleLibraryHandle);
+//	ExampleLibraryHandle = nullptr;*/
+//	
+//	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Descargado"));
+//}
 
 
 	
