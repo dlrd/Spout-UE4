@@ -200,16 +200,16 @@ namespace spoututils {
 	// Find subkey
 	bool FindSubKey(HKEY hKey, const char *subkey);
 
+	// Logging function.
+	// Used internally to perform logging.  
+	// The function code can be changed to produce logs as required
+	void _doLog(SpoutLogLevel level, const char* format, va_list args);
+
 	//
 	// Private functions
 	//
-	//namespace
-	//{
-		// Logging function.
-		// Used internally to perform logging.  
-		// The function code can be changed to produce logs as required
-		void _doLog(SpoutLogLevel level, const char* format, va_list args);
-
+	//namespace 
+	//{ smode
 		// Local functions
 		std::string _getLogPath();
 		std::string _levelName(SpoutLogLevel level);
@@ -219,7 +219,7 @@ namespace spoututils {
 		bool GetNVIDIAmode(const char *command, int * mode);
 		bool SetNVIDIAmode(const char *command, int mode);
 		bool ExecuteProcess(char *path);
-	//}
+	//} // smode
 
 
 	//
