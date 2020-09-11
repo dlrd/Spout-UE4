@@ -1007,11 +1007,12 @@ bool Spout::OpenReceiver (char* theName, unsigned int& theWidth, unsigned int& t
 	// printf("    bDXinitOK = %d, bMemory = %d\n", bDxInitOK, bMemory);
 
 	// The receiver and sender must be running on the same GPU.
-	if (interop.GetAdapter() != interop.GetAdapterIndex(Sendername)) {
-		// GetAdapter() returns the adapter index that is set for the receiver.
-		// GetAdapterIndex returns the adapter index that was set for the sender.
-		return false;
-	}
+	// Smode Tech: TMP: Relax this 
+	//if (interop.GetAdapter() != interop.GetAdapterIndex(Sendername)) {
+	//	// GetAdapter() returns the adapter index that is set for the receiver.
+	//	// GetAdapterIndex returns the adapter index that was set for the sender.
+	//	return false;
+	//}
 
 	//
 	// Dynamic switch between memory and texture share

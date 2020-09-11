@@ -509,7 +509,10 @@ bool isExtensionSupported(const char *extension)
 	if(strchr(extension, ' '))
 		return false;
 
-	const char * extensionsstr = (const char *)glGetString(GL_EXTENSIONS);
+	const char* extensionsstr = nullptr; 
+#ifdef legacyOpenGL // SMODE TECH
+	extensionsstr = (const char*)glGetString(GL_EXTENSIONS);
+#endif 
 	if (extensionsstr) {
 		std::string extensions = extensionsstr;
 		std::size_t found = extensions.find(extension);

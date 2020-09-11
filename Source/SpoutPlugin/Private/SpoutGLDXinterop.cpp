@@ -384,7 +384,7 @@ spoutGLDXinterop::spoutGLDXinterop() {
 	// If the hardware is not interop compatible they will fail to work.
 	DWORD dwMemory = 0;
 	if (ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "MemoryShare", &dwMemory)) {
-		m_bUseMemory = (dwMemory == 1);
+		m_bUseMemory = false; // SMODE TECH // (dwMemory == 1);
 	}
 
 	// Disable texture processing for memoryshare
@@ -481,8 +481,9 @@ bool spoutGLDXinterop::GLDXcompatible()
 				// The extensions required for texture access are not available.
 				// The user can specify memoryshare mode but even if the user
 				// has not made a selection, default to Memoryshare
-				m_bUseGLDX = false;
-				m_bUseMemory = true;
+				// SMODE TECH
+				//m_bUseGLDX = false;
+				//m_bUseMemory = true;
 				SpoutLogWarning("spoutGLDXinterop::GLDXcompatible - GL/DX extensions not available");
 			}
 			else {
@@ -492,8 +493,9 @@ bool spoutGLDXinterop::GLDXcompatible()
 					// but that the GL/DX interop functions fail.
 					// This has been noted on dual graphics machines with the NVIDIA Optimus driver.
 					// If the compatibility test fails, fall back to memoryshare
-					m_bUseGLDX = false;
-					m_bUseMemory = true;
+					// SMODE TECH
+					//m_bUseGLDX = false;
+					//m_bUseMemory = true;
 					SpoutLogWarning("spoutGLDXinterop::GLDXcompatible - GL/DX interop functions failed");
 				}
 				else {
@@ -504,8 +506,9 @@ bool spoutGLDXinterop::GLDXcompatible()
 		}
 		else {
 			// Failed to open DirectX - must use memoryshare
-			m_bUseGLDX = false;
-			m_bUseMemory = true;
+			// SMODE TECH
+			//m_bUseGLDX = false;
+			//m_bUseMemory = true;
 			SpoutLogWarning("spoutGLDXinterop::GLDXcompatible - OpenDirectX failed");
 		}
 
@@ -3119,6 +3122,7 @@ bool spoutGLDXinterop::GetDX9()
 // Return registry MemoryShare mode
 bool spoutGLDXinterop::GetMemoryShareMode()
 {
+	return false; // SMODE TECH
 	bool bRet = false;
 	DWORD dwMem = 0;
 	if(ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "MemoryShare", &dwMem)) {
@@ -3130,6 +3134,8 @@ bool spoutGLDXinterop::GetMemoryShareMode()
 // Set memoryshare mode to the regiistry for all applications
 bool spoutGLDXinterop::SetMemoryShareMode(bool bMem)
 {
+	// SMODE TECH
+	return false;
 	m_bUseMemory = bMem;
 	if (WriteDwordToRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "MemoryShare", (DWORD)bMem))
 		return true;
@@ -3147,7 +3153,8 @@ bool spoutGLDXinterop::GetMemoryShare()
 // Can be used by other classes for dynamic switch between modes
 void spoutGLDXinterop::SetMemoryShare(bool bMode)
 {
-	m_bUseMemory = bMode;
+// SMODE TECH
+//	m_bUseMemory = bMode;
 }
 
 // Get share mode for a registered sender
