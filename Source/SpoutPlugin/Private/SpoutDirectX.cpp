@@ -613,15 +613,7 @@ bool spoutDirectX::SetAdapter(int index)
 		return false;
 	}
 
-	/*
-	// Test for a valid pointer
-	if (!GetAdapterPointer(index)) {
-		SpoutLogError("spoutDirectX::SetAdapter(%d) - Incompatible adapter pointer", index);
-		return false;
-	}
-	*/
-
-	// Set the global adapter pointer for DX11
+	// Get the global adapter pointer for DX11
 	pAdapter = GetAdapterPointer(index);
 	if(pAdapter == nullptr) {
 		SpoutLogError("spoutDirectX::SetAdapter - Could not get pointer for adapter %d", index);
