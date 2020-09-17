@@ -419,7 +419,7 @@ int spoutSenderNames::GetMaxSenders()
 
 // This retrieves the info from the requested sender and fails if the sender does not exist
 // For external access to getSharedInfo - redundancy
-bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width, unsigned int &height, HANDLE &dxShareHandle, DWORD &dwFormat)
+bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width, unsigned int &height, HANDLE &dxShareHandle, DWORD &dwFormat, std::chrono::high_resolution_clock::time_point* systemTime /* = nullptr /** Smode Tech */)
 {
 	SharedTextureInfo info;
 
@@ -432,6 +432,9 @@ bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width
 		dxShareHandle = (HANDLE)info.shareHandle;
 #endif
 		dwFormat      = info.format;
+
+		if (systemTime) //  Smode Tech
+			*systemTime = std::chrono::high_resolution_clock::now();
 
 		return true;
 	}
@@ -481,7 +484,9 @@ bool spoutSenderNames::SetSenderInfo(const char* sendername, unsigned int width,
 	info.usage = 0;
 	// Partner ID
 	info.partnerId = 0;
-	// Description : Unused
+	
+	*reinterpret_cast<std::chrono::high_resolution_clock::time_point*>(info.description) = std::chrono::high_resolution_clock::now(); // SMODE TECH time 
+  // Description : Unused
 	// memset((void *)info.description, 256, 0); // wchar 128
 
 	// Set data to the memory map
