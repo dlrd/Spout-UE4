@@ -300,6 +300,10 @@
 					  Change GetMemoryShare(const char* sendername) to 
 					  GetSenderMemoryShare(const char* sendername) for compatibility with SpoutLibrary
 					  char* argument consistency
+		18.09.20	- use %lu and %lx for all unsigned sprintf
+					  Change from Usage field to partnerID for sender adapter index for 2.006 compatibility
+					  Protect against null sendername in GetSenderAdapter and GetHostPath
+		19.09.20	- Remove Auto share mode
 
 */
 
@@ -371,7 +375,7 @@ spoutGLDXinterop::spoutGLDXinterop() {
 	m_bInitialized = false;
 
 	// ===============================================================
-	//            Get mode flags from the registry
+	//            Get sharing mode flags from the registry
 	//         User can set the modes using SpoutDXmode
 	//   Sharing mode is modified by GLDXcompatible depending on the
 	//   availability of Directx and OpenGL GL/DX interop extensions
@@ -380,16 +384,9 @@ spoutGLDXinterop::spoutGLDXinterop() {
 	m_bUseDX9    = false; // Use DX9 (true) or DX11 (default false)
 	m_bUseGLDX   = true;  // GPU texture processing (default)
 	m_bUseMemory = false; // Memoryshare
-	m_bUseAuto   = false; // Auto dynamic switch between texture/memory
 	
 	ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "DX9", &dwMode);
 	m_bUseDX9 = (dwMode == 1);
-
-	// Auto switch between memory and texture share - 2.007 and greater
-	// Default is set false above
-	if (ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "Auto", &dwMode)) {
-		m_bUseAuto = (dwMode == 1);
-	}
 
 	// Memoryshare - 2.005 and greater
 	// User selection of Memoryshare depends on >2.004 SpoutDirectX, >2.005 SpoutDXmode, >2.006 SpoutSettings.
@@ -397,10 +394,9 @@ spoutGLDXinterop::spoutGLDXinterop() {
 		m_bUseMemory = (dwMode == 1);
 	}
 
-	// Disable texture and auto-switch for memoryshare
+	// Disable texture for memoryshare
 	if (m_bUseMemory) {
 		m_bUseGLDX = false;
-		m_bUseAuto = false;
 	}
 
 	// printf("spoutGLDXinterop::spoutGLDXinterop() - m_bUseMemory = %d\n", m_bUseMemory);
@@ -425,7 +421,7 @@ spoutGLDXinterop::~spoutGLDXinterop()
 // GLDXcompatible
 //
 // Hardware compatibility test
-// Switches to memory share for user Auto share mode selection
+// Switches application to memory share if not compatible
 // Other classes can use GetMemoryShare to return m_bUseMemory
 //
 //  o LoadGLextensions
@@ -438,9 +434,6 @@ spoutGLDXinterop::~spoutGLDXinterop()
 //  o GLDXready
 //      Checks OpenGL GL/DX extension functions
 //		and creates an interop device for success
-
-//
-// Version 5 - auto-switch application sharing mode
 //
 bool spoutGLDXinterop::GLDXcompatible()
 {
@@ -476,27 +469,22 @@ bool spoutGLDXinterop::GLDXcompatible()
 	}
 
 
-	// Use class variable for compatibility test pass
-	// m_bUseGLDX is not changed by the test.
-	// bool bUseGLDX = m_bUseGLDX;
-
 	// Get the user selected share mode from the registry
-	// 0 - Texture : 1 - Memory : 2 - Auto
+	// 0 - Texture : 1 - Memory
 	//
 	// Memory share mode
 	//     Compatibility test not required
 	//
 	// Texture share mode
-	// Auto share mode (2.007 only)
 	//     Not texture compatible
 	//         Set memory share mode for this application 
 	//     Compatible
 	//         Re-set texture share mode for this application 
 	//
-	//
-	
 	SpoutLogNotice("spoutGLDXinterop::GLDXcompatible - testing for texture share compatibility");
 
+	// Use class variable for compatibility test.
+	// (m_bUseGLDX is not changed by the test)
 	// Assume texture share compatible before the tests
 	bool bUseGLDX = true;
 
@@ -591,7 +579,7 @@ HWND spoutGLDXinterop::GetRenderWindow()
 // For external access so that the global class variables are used
 bool spoutGLDXinterop::OpenDirectX(HWND hWnd, bool bDX9)
 {
-	SpoutLogNotice("spoutGLDXinterop::OpenDirectX - hWnd = 0x%x, DX9 = %d", hWnd, bDX9);
+	SpoutLogNotice("spoutGLDXinterop::OpenDirectX - hWnd = 0x%X, DX9 = %d", hWnd, bDX9);
 
 	// If user requested DX9 then use it.
 	if (bDX9) {
@@ -711,7 +699,7 @@ bool spoutGLDXinterop::OpenDirectX11()
 	// Retrieve the context pointer
 	m_pImmediateContext = spoutdx.GetImmediateContext();
 
-	SpoutLogNotice("    Device 0x%Ix : Context 0x%Ix", m_pd3dDevice, m_pImmediateContext);
+	SpoutLogNotice("    Device 0x%IX : Context 0x%IX", (intptr_t)m_pd3dDevice, (intptr_t)m_pImmediateContext);
 
 	return true;
 }
@@ -763,6 +751,9 @@ bool spoutGLDXinterop::DX11available()
 //	0x163C	intel
 //	0x8086  Intel
 //	0x8087  Intel
+//
+// See also the DirectX version :
+// bool spoutDirectX::GetAdapterInfo(char *adapter, char *display, int maxchars)
 //
 bool spoutGLDXinterop::GetAdapterInfo(char* renderadapter, 
 									  char* renderdescription, char* renderversion,
@@ -1074,7 +1065,7 @@ bool spoutGLDXinterop::CreateOpenGL()
 		if (!SetPixelFormat(m_hdc, iFormat, &pfd)) {
 			DWORD dwError = GetLastError();
 			// 2000 (0x7D0) The pixel format is invalid.
-			// Caused by repeated call of  the SetPixelFormat function
+			// Caused by repeated call of the SetPixelFormat function
 			char temp[128];
 			sprintf_s(temp, "spoutGLDXinterop::CreateOpenGL - SetPixelFormat Error %lu (%lx)", dwError, dwError);
 			SpoutLogError("%s", temp);
@@ -1405,13 +1396,15 @@ bool spoutGLDXinterop::CreateInterop(HWND hWnd, const char* sendername, unsigned
 	m_TextureInfo.shareHandle = (unsigned __int32)m_dxShareHandle;
 #endif
 	// Additional fields
-	// DWORD usage; // originall reserved for texture usage (now is the sender adapter index)
-	m_TextureInfo.usage = (DWORD)GetAdapter();
+	// DWORD usage; // Texture usage (unused)
+	m_TextureInfo.usage = 0;
 	// wchar_t description[128]; // Wyhon compatible description
 	// 26.08.15 - set the executable path to the sender's shared info 
 	// (not documented and could be removed)
-	// unsigned __int32 partnerId; // Wyphon id of partner that shared it with us (unused)
-	m_TextureInfo.partnerId = 0;
+	// unsigned __int32 partnerId;
+	// Originall reserved for Wyphon id of partner that shared it with us
+	// Now used for the sender adapter index.
+	m_TextureInfo.partnerId = (unsigned __int32)GetAdapter();;
 
 	// Write host path and Adapter index to the sender shared memory
 	if (!bReceive) {
@@ -1716,7 +1709,7 @@ HANDLE spoutGLDXinterop::LinkGLDXtextures (	void* pDXdevice,
 
 	if (!hInteropObject) {
 		dwError = GetLastError();
-		sprintf_s(tmp, 128, "spoutGLDXinterop::LinkGLDXtextures - wglDXRegisterObjectNV :error (0x%x)\n", (unsigned int)dwError);
+		sprintf_s(tmp, 128, "spoutGLDXinterop::LinkGLDXtextures - wglDXRegisterObjectNV :error (0x%lx)\n", dwError);
 		switch (dwError) {
 			case ERROR_INVALID_HANDLE :
 				strcat_s(tmp, 128, "    No GL context is made current to the calling thread.");
@@ -1905,41 +1898,38 @@ void spoutGLDXinterop::CleanupDX9()
 
 void spoutGLDXinterop::CleanupDX11()
 {
-	if (m_pd3dDevice != NULL) {
+	if (m_pd3dDevice) {
 
 		SpoutLogNotice("spoutGLDXinterop::CleanupDX11()");
 
-		unsigned long refcount = 0;
+		// Reference count warnings are in the SpoutDirectX class
 
-		if (m_pd3dDevice) {
-
-			if (m_pSharedTexture) {
-				// Release interop link before releasing the texture
-				if (m_hInteropDevice && m_hInteropObject)
-					wglDXUnregisterObjectNV(m_hInteropDevice, m_hInteropObject);
-				refcount = spoutdx.ReleaseDX11Texture(m_pd3dDevice, m_pSharedTexture);
-			}
-
-			// Important to set pointer to NULL or it will crash if released again
-			m_pSharedTexture = nullptr;
-
-			// Re-set shared texture handle
-			m_dxShareHandle = NULL;
-
-			// 12.11.18 - To avoid memory leak with dynamic objects
-			//            must always be freed, not only on exit.
-			//            Device recreated for a new sender.
-			refcount += spoutdx.ReleaseDX11Device(m_pd3dDevice);
-
-			if (refcount > 0)
-				SpoutLogWarning("CleanupDX11:CleanupDX11() - refcount = %d", refcount);
+		if (m_pSharedTexture) {
+			SpoutLogNotice("    Releasing shared texture");
+			// Release interop link before releasing the texture
+			if (m_hInteropDevice && m_hInteropObject)
+				wglDXUnregisterObjectNV(m_hInteropDevice, m_hInteropObject);
+			spoutdx.ReleaseDX11Texture(m_pd3dDevice, m_pSharedTexture);
 		}
 
-		// NULL the pointers
-		m_pImmediateContext = NULL;
-		m_pd3dDevice = NULL;
+		// Important to set pointer to NULL or it will crash if released again
+		m_pSharedTexture = nullptr;
 
+		// Re-set shared texture handle
+		m_dxShareHandle = NULL;
+
+		// 12.11.18 - To avoid memory leak with dynamic objects
+		//            must always be freed, not only on exit.
+		//            Device recreated for a new sender.
+		// Releases immediate context and device in the SpoutDirectX class
+		// m_pImmediateContext and m_pd3dDevice are copies of these
+		spoutdx.ReleaseDX11Device(m_pd3dDevice);
 	}
+
+	// NULL the class pointer copies
+	m_pImmediateContext = nullptr;
+	m_pd3dDevice = nullptr;
+
 }
 
 
@@ -2036,7 +2026,6 @@ bool spoutGLDXinterop::setSharedInfo(const char* sharedMemoryName, SharedTexture
 	}
 }
 
-
 bool spoutGLDXinterop::WriteTexture(GLuint TextureID, GLuint TextureTarget,
 	unsigned int width, unsigned int height,
 	bool bInvert, GLuint HostFBO)
@@ -2044,10 +2033,6 @@ bool spoutGLDXinterop::WriteTexture(GLuint TextureID, GLuint TextureTarget,
 	// Zero texture is supported for all sharing modes
 	// A texture must be attached to the Host FBO attachment point 0 for read
 	if (m_bUseMemory) { // Memoryshare
-		
-		// LJ DEBUG
-		// printf("m_bUseMemory = %d : m_bUseGLDX = %d\n", m_bUseMemory, m_bUseGLDX);
-
 		if (!WriteMemory(TextureID, TextureTarget, width, height, bInvert, HostFBO)) {
 			SpoutLogError("spoutGLDXinterop::WriteTexture - WriteMemory failed");
 			return false;
@@ -3169,11 +3154,11 @@ bool spoutGLDXinterop::GetMemoryShareMode()
 	DWORD dwMem = 0;
 	if(ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "MemoryShare", &dwMem)) {
 		bRet = (dwMem == 1);
-	}	
+	}
 	return bRet;
 }
 
-// Set memoryshare mode to the regiistry for all applications
+// Set memoryshare mode to the registry for all applications
 bool spoutGLDXinterop::SetMemoryShareMode(bool bMem)
 {
 	m_bUseMemory = bMem;
@@ -3214,17 +3199,13 @@ bool spoutGLDXinterop::GetSenderMemoryShare(const char* sendername)
 //
 // Return sharing mode set to the registry
 //
-// 0 - texture (Memoryshare = 0)
-// 1 - memory  (Memoryshare = 1)
-// 2 - auto    (Autoshare   = 2)
-//
 // Re-uses 2.006 CPU mode setting
 // 0 - texture (Memoryshare = 0)
-// 1 - CPU     (Autoshare   = 2)
+// 1 - CPU     (Memoryshare = 1)
 // 2 - memory  (Memoryshare = 1)
 //
 // Left for compatibility with 2.006 applications.
-// If CPU mode is detected, Auto mode is returned.
+// If CPU mode is detected, Memory share is returned.
 // CPU registry setting may be removed for future versions
 //
 int spoutGLDXinterop::GetShareMode()
@@ -3236,24 +3217,10 @@ int spoutGLDXinterop::GetShareMode()
 	}
 
 	DWORD dwMode = 0;
-	// Auto : dynamic texture/memory mode switching according to texture share capability
-	// Auto mode is 2.007 only
-	if (ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "Autoshare", &dwMode)) {
-		// 2 : Auto dynamic switch
-		// otherwise texture share (memoryshare is already checked above)
-		if (dwMode == 1)
-			return 2;
-		else
-			return 0;
-
-	}
-
-	// In case of 2.006, "Autoshare" will not be in the registry
-	// and SpoutDXmode mode may been used for CPU mode
-	// Return Auto share instead of CPU mode
+	// Return Memory share instead of 2.006 CPU mode
 	if (ReadDwordFromRegistry(HKEY_CURRENT_USER, "Software\\Leading Edge\\Spout", "CPU", &dwMode)) {
 		if (dwMode == 1)
-			return 2;
+			return 1;
 	}
 
 	// If 2.006 CPU mode is not set
@@ -3332,7 +3299,7 @@ bool spoutGLDXinterop::GetAdapterName(int index, char* adaptername, int maxchars
 // Set graphics adapter for Spout output
 bool spoutGLDXinterop::SetAdapter(int index) 
 {
-	if(spoutdx.SetAdapter(index)) {
+	if (spoutdx.SetAdapter(index)) {
 		return true;
 	}
 	SpoutLogError("spoutGLDXinterop::SetAdapter(%d) failed", index);
@@ -3349,10 +3316,13 @@ int spoutGLDXinterop::GetAdapter()
 // Get sender adapter index in shared memory (0 default)
 int spoutGLDXinterop::GetSenderAdapter(const char* sendername)
 {
+	if (!sendername || !sendername[0])
+		return 0;
+
 	SharedTextureInfo info;
 	int n = 0;
 	if (senders.getSharedInfo(sendername, &info)) {
-		n = (int)info.usage; // Sender adapter index
+		n = (int)info.partnerId; // Sender adapter index
 	}
 	else {
 		// Return default 0 if the info cannot be accessed
@@ -3369,7 +3339,7 @@ bool spoutGLDXinterop::SetSenderAdapter(const char* sendername)
 		SpoutLogWarning("spoutGLDXinterop::SetAdapterIndex(%s) - could not get sender info", sendername);
 		return false;
 	}
-	info.usage = (DWORD)GetAdapter(); // Sender adapter index
+	info.partnerId = (unsigned __int32)GetAdapter(); // Sender adapter index
 	if (!senders.setSharedInfo(sendername, &info)) {
 		SpoutLogWarning("spoutGLDXinterop::SetAdapterIndex(%s) - could not set sender info", sendername);
 	}
@@ -3382,6 +3352,9 @@ bool spoutGLDXinterop::SetSenderAdapter(const char* sendername)
 // The description string could be used for other things in future
 bool spoutGLDXinterop::GetHostPath(const char* sendername, char* hostpath, int maxchars)
 {
+	if (!sendername || !sendername[0])
+		return false;
+
 	SharedTextureInfo info;
 	int n = 0;
 	if (!senders.getSharedInfo(sendername, &info)) {
@@ -3394,6 +3367,7 @@ bool spoutGLDXinterop::GetHostPath(const char* sendername, char* hostpath, int m
 	strcpy_s(hostpath, n, (char*)info.description);
 
 	return true;
+
 }
 
 // Set host executable path in shared memory
