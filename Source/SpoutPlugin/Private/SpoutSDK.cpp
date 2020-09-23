@@ -1165,8 +1165,9 @@ bool Spout::InitSender(HWND hwnd, const char* theSendername,
 		if (!interop.CreateInterop(hwnd, sendername, theWidth, theHeight, theFormat, false)) {  // False for a sender
 			// Switch to memoryshare on CreateInterop failure
 			SpoutLogWarning("Spout::InitSender - CreateInterop failed : switching to memoryshare");
-			bMemory = true; // Set memory mode
-			interop.SetMemoryShare(true);
+			return false; // SMODE TECH
+			//bMemory = true; // Set memory mode
+			//interop.SetMemoryShare(true);
 		}
 		else {
 			SpoutLogNotice("Spout::InitSender - CreateInterop success");
@@ -1236,9 +1237,10 @@ bool Spout::InitReceiver(HWND hwnd, char* sendername, unsigned int width, unsign
 		// This will create globals for texture sharing local to the interop class
 		if (!interop.CreateInterop(hwnd, sendername, width, height, dwFormat, true)) { // true meaning receiver
 			// Switch to memoryshare on failure
-			SpoutLogWarning("Spout::InitReceiver - CreateInterop failed : switching to memoryshare");
-			bMemory = true;
-			interop.SetMemoryShare(true);
+			return false;  // SMODE TECH
+			//SpoutLogWarning("Spout::InitReceiver - CreateInterop failed : switching to memoryshare");
+			//bMemory = true;
+			//interop.SetMemoryShare(true);
 		}
 	}
 
