@@ -1,6 +1,7 @@
 #include "../Public/SpoutBPFunctionLibrary.h"
 #include "SpoutPluginPrivatePCH.h"
 #include "../Public/SpoutModule.h"
+#include "SmodeSpoutMetaData.h"
 
 #include <string>
 #include <iostream>
@@ -425,7 +426,7 @@ ESpoutState CheckSenderState(FName spoutName){
 
 }
 
-bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, float targetGamma)
+bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, float targetGamma, int64 frameNumber /*= -1 */)
 {
 	if (sender == nullptr)
 	{
@@ -527,10 +528,14 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	baseTexture->GetDesc(&td);
 
 	result = sender->UpdateSender(TCHAR_TO_ANSI(*spoutName.ToString()), td.Width, td.Height, targetHandle, td.Format /** Smode Tech Fix Bad Texture Format */);
+	smode::SmodeSpoutMetaData metaData;
+	metaData.frameTime = std::chrono::high_resolution_clock::now();
+	metaData.frameNumber = frameNumber;
+	sender->SetDescription(TCHAR_TO_ANSI(*spoutName.ToString()), &metaData, sizeof(metaData));
 	return result;
 }
 
-bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture)
+bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture, int64& frameNumber)
 {
 	const FString SenderNameString = spoutName.GetPlainNameString();
 
@@ -588,7 +593,7 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 			int32 Stride = SenderStruct->w * 4;
 
 			ENQUEUE_RENDER_COMMAND(void)(
-				[SenderStruct, Stride](FRHICommandListImmediate& RHICmdList)
+				[SenderStruct, Stride, spoutName, &frameNumber](FRHICommandListImmediate& RHICmdList)
 				{
 					ID3D11Texture2D* t_texTemp = SenderStruct->texTemp;
 					ID3D11Texture2D* t_tex = (ID3D11Texture2D*)SenderStruct->sharedResource;
@@ -622,6 +627,9 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 						(uint8*)pixel
 					);
 
+					smode::SmodeSpoutMetaData metaData;
+					if (sender->GetDescription(TCHAR_TO_ANSI(*spoutName.ToString()), &metaData, sizeof(metaData)) && metaData.isValid())
+						frameNumber = metaData.frameNumber;
 
 				});
 

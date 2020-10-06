@@ -86,6 +86,7 @@
 */
 #include "SpoutSenderNames.h"
 #include <assert.h>
+#include <algorithm> // Smode Tech for min max
 
 spoutSenderNames::spoutSenderNames() {
 
@@ -1014,7 +1015,7 @@ bool spoutSenderNames::SetDescription(const char* sendername, const void* descri
     return false;
   }
 
-  memcpy(info.description, description, min(size, sizeof(info.description)));
+  memcpy(info.description, description, std::min(size, sizeof(info.description)));
   if (!setSharedInfo(sendername, &info)) {
     SpoutLogWarning("spoutSenderNames::SetHostPath(%s) - could not set sender info", sendername);
   }
@@ -1033,7 +1034,7 @@ bool spoutSenderNames::GetDescription(const char* sendername, void* description,
     return false;
   }
 
-  memcpy(description, info.description, min(size, sizeof(info.description)));
+  memcpy(description, info.description, std::min(size, sizeof(info.description)));
   return true;
 }
 
