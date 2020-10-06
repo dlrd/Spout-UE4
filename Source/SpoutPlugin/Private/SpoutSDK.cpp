@@ -1166,10 +1166,11 @@ bool Spout::InitSender(HWND hwnd, const char* theSendername,
 
 		// Initialize the GL/DX interop and create a new shared texture (false = sender)
 		if (!interop.CreateInterop(hwnd, sendername, theWidth, theHeight, theFormat, false)) {  // False for a sender
-			SpoutLogWarning("Spout::InitSender - CreateInterop failed");
-			bMemory = true;
-			interop.SetMemoryShare(true);
-			// ??? check
+			// Switch to memoryshare on CreateInterop failure
+			SpoutLogWarning("Spout::InitSender - CreateInterop failed : switching to memoryshare");
+			return false; // SMODE TECH
+			//bMemory = true; // Set memory mode
+			//interop.SetMemoryShare(true);
 		}
 		else {
 			SpoutLogNotice("Spout::InitSender - CreateInterop success");

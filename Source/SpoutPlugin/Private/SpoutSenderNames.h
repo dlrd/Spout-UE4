@@ -130,7 +130,7 @@ class SPOUT_DLLEXP spoutSenderNames {
 		//
 
 		// Get sender information
-		bool GetSenderInfo (const char* sendername, unsigned int &width, unsigned int &height, HANDLE &dxShareHandle, DWORD &dwFormat, std::chrono::high_resolution_clock::time_point* systemTime = nullptr /** Smode Tech */);
+		bool GetSenderInfo (const char* sendername, unsigned int &width, unsigned int &height, HANDLE &dxShareHandle, DWORD &dwFormat);
 		// Set sender information
 		bool SetSenderInfo (const char* sendername, unsigned int width, unsigned int height, HANDLE dxShareHandle, DWORD dwFormat);
 		// Generic sender map info read (returned in a shared texture information structure)
@@ -141,6 +141,9 @@ class SPOUT_DLLEXP spoutSenderNames {
 		int  GetPartnerID(const char* sendername);
 		// Set partnerID field
 		bool SetPartnerID(const char* sendername, int index);
+    // Smode Tech set description accessors
+    bool SetDescription(const char* sendername, const void* description, size_t size); 
+    bool GetDescription(const char* sendername, void* description, size_t size);
 
 
 		//

@@ -421,7 +421,7 @@ int spoutSenderNames::GetMaxSenders()
 
 // This retrieves the info from the requested sender and fails if the sender does not exist
 // For external access to getSharedInfo - redundancy
-bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width, unsigned int &height, HANDLE &dxShareHandle, DWORD &dwFormat, std::chrono::high_resolution_clock::time_point* systemTime /* = nullptr /** Smode Tech */)
+bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width, unsigned int &height, HANDLE &dxShareHandle, DWORD &dwFormat)
 {
 	SharedTextureInfo info;
 
@@ -434,10 +434,6 @@ bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width
 		dxShareHandle = (HANDLE)info.shareHandle;
 #endif
 		dwFormat      = info.format;
-
-		if (systemTime) //  Smode Tech
-			*systemTime = std::chrono::high_resolution_clock::now();
-
 		return true;
 	}
 	return false;
@@ -487,7 +483,6 @@ bool spoutSenderNames::SetSenderInfo(const char* sendername, unsigned int width,
 	// Partner ID
 	info.partnerId = 0;
 	
-	*reinterpret_cast<std::chrono::high_resolution_clock::time_point*>(info.description) = std::chrono::high_resolution_clock::now(); // SMODE TECH time 
   // Description : Unused
 	// memset((void *)info.description, 256, 0); // wchar 128
 
@@ -1006,6 +1001,42 @@ bool spoutSenderNames::SetPartnerID(const char* sendername, int index)
 	}
 	return true;
 }
+
+// Smode Tech
+bool spoutSenderNames::SetDescription(const char* sendername, const void* description, size_t size)
+{
+  if (!sendername || !sendername[0])
+    return false;
+
+  SharedTextureInfo info;
+  if (!getSharedInfo(sendername, &info)) {
+    SpoutLogWarning("spoutSenderNames::SetHostPath(%s) - could not get sender info", sendername);
+    return false;
+  }
+
+  memcpy(info.description, description, min(size, sizeof(info.description)));
+  if (!setSharedInfo(sendername, &info)) {
+    SpoutLogWarning("spoutSenderNames::SetHostPath(%s) - could not set sender info", sendername);
+  }
+  return true;
+}
+
+// Smode Tech
+bool spoutSenderNames::GetDescription(const char* sendername, void* description, size_t size)
+{
+  if (!sendername || !sendername[0])
+    return false;
+
+  SharedTextureInfo info;
+  if (!getSharedInfo(sendername, &info)) {
+    SpoutLogWarning("spoutSenderNames::SetHostPath(%s) - could not get sender info", sendername);
+    return false;
+  }
+
+  memcpy(description, info.description, min(size, sizeof(info.description)));
+  return true;
+}
+
 
 //---------------------------------------------------------
 bool spoutSenderNames::SenderDebug(const char *Sendername, int size)
