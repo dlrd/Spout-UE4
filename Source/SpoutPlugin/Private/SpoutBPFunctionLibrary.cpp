@@ -1,7 +1,10 @@
 #include "../Public/SpoutBPFunctionLibrary.h"
 #include "SpoutPluginPrivatePCH.h"
 #include "../Public/SpoutModule.h"
+
+// Smode Tech, add includes
 #include "SmodeSpoutMetaData.h"
+#include "SpoutSenderNames.h"
 
 #include <string>
 #include <iostream>

@@ -3,7 +3,8 @@
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h" // SMODE TECH, Fix UE 4.25
 #endif
-#include "Spout.h"
+#include "SpoutDirectX.h" 
+#include "SpoutFrameCount.h" // Smode Tech
 #include <d3d11.h>
 #if PLATFORM_WINDOWS
 #include "Windows/HideWindowsPlatformTypes.h" // SMODE TECH, Fix UE 4.25
