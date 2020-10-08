@@ -136,14 +136,11 @@ class SPOUT_DLLEXP spoutSenderNames {
 		bool getSharedInfo (const char* sendername, SharedTextureInfo* info);
 		// Generic sender map info write
 		bool setSharedInfo (const char* sendername, SharedTextureInfo* info);
-		// Get partnerID field
-		int  GetPartnerID(const char* sendername);
-		// Set partnerID field
-		bool SetPartnerID(const char* sendername, int index);
-        // Smode Tech set description accessors
-        bool SetDescription(const char* sendername, const void* description, size_t size); 
-        bool GetDescription(const char* sendername, void* description, size_t size);
-
+		// Test for shared info memory map existence
+		bool hasSharedInfo(const char* sendername);
+    // Smode Tech set description accessors
+    bool SetDescription(const char* sendername, const void* description, size_t size); 
+    bool GetDescription(const char* sendername, void* description, size_t size);
 
 		//
 		// Functions to maintain the active sender

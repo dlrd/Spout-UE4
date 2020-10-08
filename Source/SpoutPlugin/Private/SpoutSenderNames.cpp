@@ -57,6 +57,9 @@
 	21.07.20 - Change default max senders from 256 to 64
 	28.08.20 - Correct in SpoutSettings
 	24.09.20 - Add GetPartnerID and SetPartnerID
+			 - Some testing of print format for HANDLE 32/64 bit
+	25.09.20 - Remove GetPartnerID and SetPartnerID - not reliable
+	29.09.20 - Add hasSharedInfo - to test for shared info memory map existence
 
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -435,6 +438,7 @@ bool spoutSenderNames::GetSenderInfo(const char* sendername, unsigned int &width
 		dxShareHandle = (HANDLE)info.shareHandle;
 #endif
 		dwFormat      = info.format;
+
 		return true;
 	}
 	return false;
@@ -483,8 +487,7 @@ bool spoutSenderNames::SetSenderInfo(const char* sendername, unsigned int width,
 	info.usage = 0;
 	// Partner ID
 	info.partnerId = 0;
-	
-  // Description : Unused
+	// Description : Unused
 	// memset((void *)info.description, 256, 0); // wchar 128
 
 	// Set data to the memory map
@@ -536,6 +539,7 @@ bool spoutSenderNames::SetActiveSender(const char *Sendername)
 
 } // end SetActiveSender
 
+
 // Retrieve the current active Sender name
 bool spoutSenderNames::GetActiveSender(char Sendername[SpoutMaxSenderNameLen])
 {
@@ -549,7 +553,7 @@ bool spoutSenderNames::GetActiveSender(char Sendername[SpoutMaxSenderNameLen])
 			return true;
 		}
 		else {
-			// Erase the active sender map ?
+			// Erase the active sender name ?
 		}
 	}
 	
@@ -965,43 +969,20 @@ bool spoutSenderNames::setSharedInfo(const char* sharedMemoryName, SharedTexture
 } // end getSharedInfo
 
 
-// Get patrnerID field shared memory (0 default)
-int spoutSenderNames::GetPartnerID(const char* sendername)
+// Test for shared info memory map existence
+bool spoutSenderNames::hasSharedInfo(const char* sharedMemoryName)
 {
-	if (!sendername || !sendername[0])
-		return 0;
-
-	int partner = 0;
-	SharedTextureInfo info;
-	if (getSharedInfo(sendername, &info)) {
-		partner = (int)info.partnerId; // Used for sender adapter index
-		// The index retrieved could be anything for < 2.007.
-		// The application should make sure it's useful.
+	SpoutSharedMemory mem;
+	if (mem.Open(sharedMemoryName)) {
+		char *pBuf = mem.Lock();
+		if (pBuf) {
+			mem.Unlock();
+			return true;
+		}
 	}
-	else {
-		// Return default 0 if the info cannot be accessed
-		SpoutLogWarning("spoutSenderNames::GetPartnerID(%s) - could not get sender info", sendername);
-	}
+	return false;
 
-	return partner;
-}
-
-bool spoutSenderNames::SetPartnerID(const char* sendername, int index)
-{
-	if (!sendername || !sendername[0])
-		return false;
-
-	SharedTextureInfo info;
-	if (!getSharedInfo(sendername, &info)) {
-		SpoutLogWarning("spoutSenderNames::SetPartnerID(%s) - could not get sender info", sendername);
-		return false;
-	}
-	info.partnerId = (unsigned __int32)index;
-	if (!setSharedInfo(sendername, &info)) {
-		SpoutLogWarning("spoutSenderNames::SetPartnerID(%s) - could not set sender info", sendername);
-	}
-	return true;
-}
+} // end hasSharedInfo
 
 // Smode Tech
 bool spoutSenderNames::SetDescription(const char* sendername, const void* description, size_t size)
