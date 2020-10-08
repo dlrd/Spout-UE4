@@ -55,9 +55,8 @@ using namespace spoututils;
 // 100 msec wait for events
 #define SPOUT_WAIT_TIMEOUT 100
 
-// MaxSenders define replaced by a global class variable
-// Maximum for list of Sender names
-#define SpoutMaxSenderNameLen 64
+// MaxSenders define replaced by a global class variable (Maximum for list of Sender names)
+#define SpoutMaxSenderNameLen 256
 
 // The texture information structure that is saved to shared memory
 // and used for communication between senders and receivers
@@ -141,9 +140,9 @@ class SPOUT_DLLEXP spoutSenderNames {
 		int  GetPartnerID(const char* sendername);
 		// Set partnerID field
 		bool SetPartnerID(const char* sendername, int index);
-    // Smode Tech set description accessors
-    bool SetDescription(const char* sendername, const void* description, size_t size); 
-    bool GetDescription(const char* sendername, void* description, size_t size);
+        // Smode Tech set description accessors
+        bool SetDescription(const char* sendername, const void* description, size_t size); 
+        bool GetDescription(const char* sendername, void* description, size_t size);
 
 
 		//
