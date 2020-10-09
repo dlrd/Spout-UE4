@@ -68,7 +68,7 @@ struct FSenderStruct
 		UMaterialInstanceDynamic* MaterialInstanceColor;
 
 		// Pointer to our Texture's resource
-		FTexture2DResource* Texture2DResource;
+		/*FTexture2DResource Smode Tech for Unreal 4.26*/FTextureResource* Texture2DResource;
 
 		// Regions we need to update
 		FUpdateTextureRegion2D* UpdateRegions;

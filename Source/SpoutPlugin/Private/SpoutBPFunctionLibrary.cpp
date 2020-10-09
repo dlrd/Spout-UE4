@@ -121,7 +121,7 @@ void ResetTexture(UTexture2D*& Texture, UMaterialInstanceDynamic*& MaterialInsta
 	Texture->AddToRoot();
 	Texture->UpdateResource();
 	//UE_LOG(SpoutUELog, Warning, TEXT("Texture is ready???????333333"));
-	SenderStruct->Texture2DResource = (FTexture2DResource*)Texture->Resource;
+	SenderStruct->Texture2DResource = Texture->Resource;
 
 	////////////////////////////////////////////////////////////////////////////////
 	ResetMatInstance(Texture, MaterialInstance);

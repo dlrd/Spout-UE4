@@ -613,7 +613,7 @@ bool spoutDirectX::CreateDX11StagingTexture(ID3D11Device* pd3dDevice,
 	if (res != S_OK) {
 		// http://msdn.microsoft.com/en-us/library/windows/desktop/ff476174%28v=vs.85%29.aspx
 		char tmp[256];
-		sprintf_s(tmp, 256, "spoutDirectX::CreateDX11StagingTexture ERROR : [0x%x] : ", res);
+		sprintf_s(tmp, 256, "spoutDirectX::CreateDX11StagingTexture ERROR : [0x%lx] : ", res);
 		switch (res) {
 		case D3DERR_INVALIDCALL:
 			strcat_s(tmp, 256, "D3DERR_INVALIDCALL");
