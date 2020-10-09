@@ -563,7 +563,7 @@ bool spoutDirectX::CreateSharedDX11Texture(ID3D11Device* pd3dDevice,
 	// of the resource can be obtained by querying the resource for the IDXGIResource 
 	// interface and then calling GetSharedHandle.
 	IDXGIResource* pOtherResource(NULL);
-	if(FAILED(pTexture->QueryInterface( __uuidof(IDXGIResource), (void**)&pOtherResource))) {
+	if(!pTexture /* SMode Tech */ || FAILED(pTexture->QueryInterface( __uuidof(IDXGIResource), (void**)&pOtherResource))) {
 		SpoutLogFatal("spoutDirectX::CreateSharedDX11Texture - QueryInterface error");
 		return false;
 	}

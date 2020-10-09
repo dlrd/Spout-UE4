@@ -447,8 +447,12 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	switch (sendTextureFrom)
 	{
 	case ESpoutSendTextureFrom::GameViewport:
-		baseTexture = (ID3D11Texture2D*)GEngine->GameViewport->Viewport->GetRenderTargetTexture()->GetNativeResource();
+	{
+		// add nullptr SmodeTech check
+		const auto* targetTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture().GetReference() : nullptr; // SModeTech check
+		baseTexture = targetTexture ? (ID3D11Texture2D*)targetTexture->GetNativeResource() : nullptr;
 		break;
+	}
 	case ESpoutSendTextureFrom::TextureRenderTarget2D:
 		if (textureRenderTarget2D == nullptr) {
 			UE_LOG(SpoutUELog, Warning, TEXT("No TextureRenderTarget2D Selected!!"));
