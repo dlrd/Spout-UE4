@@ -7,6 +7,8 @@
 #ifndef PLUGINS_SPOUT_SMODE_META_DATA_H_
 # define PLUGINS_SPOUT_SMODE_META_DATA_H_
 
+# include "SpoutSharedMemory.h"
+
 namespace smode
 {
 
@@ -48,6 +50,38 @@ static_assert(sizeof(SmodeSpoutMetaData) < 256, "SmodeSpoutMetaData structure ca
 #else // !WIN32
 #	pragma pack()
 #endif // !WIN32
+
+struct ScopedSpoutSharedMemoryLock
+{
+  explicit ScopedSpoutSharedMemoryLock(const char* sender)
+  {
+    if (!sharedMemory.Open(sender))
+      return;
+    if (!sharedMemory.Lock())
+    {
+      sharedMemory.Close();
+      return;
+    }
+    succeed = true;
+  }
+
+  ~ScopedSpoutSharedMemoryLock()
+  {
+    if (succeed)
+    {
+      sharedMemory.Unlock();
+      sharedMemory.Close();
+    }
+    succeed = false;
+  }
+
+  bool hasSucceed() const
+    {return succeed;}
+
+private:
+  SpoutSharedMemory sharedMemory;
+  bool succeed = false;
+};
 
 
 }; /* namespace smode */

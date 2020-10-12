@@ -499,9 +499,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			return false;
 		}	
 	}
-
-	bool result = false;
-	
+		
 	if (SenderStruct->activeTextures == nullptr)
 	{
 		UE_LOG(SpoutUELog, Warning, TEXT("activeTextures is null"));
@@ -516,34 +514,36 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 		UE_LOG(SpoutUELog, Warning, TEXT("targetTex is null"));
 		return false;
 	}
-  auto* frame = SenderStruct->frame; // SmodeTech
+	FString fName = *spoutName.ToString();
 	
 	ENQUEUE_RENDER_COMMAND(void)(
-		[targetTex, baseTexture, frame](FRHICommandListImmediate& RHICmdList)
+		[targetTex, baseTexture, SenderStruct, fName, matrix1, matrix2, frameNumber](FRHICommandListImmediate& RHICmdList)
 		{
+
+			D3D11_TEXTURE2D_DESC td;
+			baseTexture->GetDesc(&td);
 			// Smode Tech frame counter based copy
-			if (frame->CheckTextureAccess(targetTex))
+			if (SenderStruct->frame->CheckTextureAccess(targetTex))
 			{
+				smode::ScopedSpoutSharedMemoryLock _(TCHAR_TO_ANSI(*fName));
 				g_pImmediateContext->CopyResource(targetTex, baseTexture);
 				g_pImmediateContext->Flush();
-				frame->SetNewFrame();
-				frame->AllowTextureAccess(targetTex);
+				SenderStruct->frame->SetNewFrame();
+				SenderStruct->frame->AllowTextureAccess(targetTex);
+				if (sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */))
+				{
+					smode::SmodeSpoutMetaData metaData;
+					metaData.frameTime = std::chrono::high_resolution_clock::now();
+					metaData.frameNumber = frameNumber;
+					static_assert(sizeof(matrix1.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
+					memcpy(metaData.matrix1, matrix1.M, sizeof(metaData.matrix1));
+					static_assert(sizeof(matrix2.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
+					memcpy(metaData.matrix2, matrix2.M, sizeof(metaData.matrix2));
+					sender->SetDescription(TCHAR_TO_ANSI(*fName), &metaData, sizeof(metaData));
+				}
 			}
 		});
-	
-	D3D11_TEXTURE2D_DESC td;
-	baseTexture->GetDesc(&td);
-
-	result = sender->UpdateSender(TCHAR_TO_ANSI(*spoutName.ToString()), td.Width, td.Height, targetHandle, td.Format /** Smode Tech Fix Bad Texture Format */);
-	smode::SmodeSpoutMetaData metaData;
-	metaData.frameTime = std::chrono::high_resolution_clock::now();
-	metaData.frameNumber = frameNumber;
-	static_assert(sizeof(matrix1.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
-	memcpy(metaData.matrix1, matrix1.M, sizeof(metaData.matrix1));
-	static_assert(sizeof(matrix2.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
-	memcpy(metaData.matrix2, matrix2.M, sizeof(metaData.matrix2));
-	sender->SetDescription(TCHAR_TO_ANSI(*spoutName.ToString()), &metaData, sizeof(metaData));
-	return result;
+	return true;
 }
 
 bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture, int64& frameNumber, FMatrix& matrix1, FMatrix& matrix2)
