@@ -631,7 +631,7 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 
 					//Update Texture
 					RHIUpdateTexture2D(
-						SenderStruct->Texture2DResource->GetTexture2DRHI(),
+						((FTexture2DResource* /** Smode hardcoded downcast for old Unreal 4.25*/)(SenderStruct->Texture2DResource))->GetTexture2DRHI(),
 						0,
 						*SenderStruct->UpdateRegions,
 						mapped.RowPitch,
