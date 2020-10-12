@@ -630,7 +630,7 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 
 					//Update Texture
 					RHIUpdateTexture2D(
-#if ENGINE_MINOR_VERSION < 25 /* Smode hardcoded downcast for old Unreal 4.25 */
+#if ENGINE_MINOR_VERSION < 26 /* Smode hardcoded downcast for old Unreal 4.25 */
 						((FTexture2DResource* )(SenderStruct->Texture2DResource))->GetTexture2DRHI(),
 #else
 						SenderStruct->Texture2DResource->GetTexture2DRHI(),
