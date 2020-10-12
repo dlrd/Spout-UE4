@@ -628,10 +628,13 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 					BYTE *pixel = (BYTE *)mapped.pData;
 					g_pImmediateContext->Unmap(t_texTemp, 0);
 
-
 					//Update Texture
 					RHIUpdateTexture2D(
-						((FTexture2DResource* /** Smode hardcoded downcast for old Unreal 4.25*/)(SenderStruct->Texture2DResource))->GetTexture2DRHI(),
+#if ENGINE_MINOR_VERSION < 25 /* Smode hardcoded downcast for old Unreal 4.25 */
+						((FTexture2DResource* )(SenderStruct->Texture2DResource))->GetTexture2DRHI(),
+#else
+						SenderStruct->Texture2DResource->GetTexture2DRHI(),
+#endif
 						0,
 						*SenderStruct->UpdateRegions,
 						mapped.RowPitch,
