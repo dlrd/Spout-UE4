@@ -429,7 +429,7 @@ ESpoutState CheckSenderState(FName spoutName){
 
 }
 
-bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, float targetGamma, int64 frameNumber /*= -1 */)
+bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, FMatrix matrix1, FMatrix matrix2, float targetGamma, int64 frameNumber /*= -1 */)
 {
 	if (sender == nullptr)
 	{
@@ -538,11 +538,15 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	smode::SmodeSpoutMetaData metaData;
 	metaData.frameTime = std::chrono::high_resolution_clock::now();
 	metaData.frameNumber = frameNumber;
+	static_assert(sizeof(matrix1.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
+	memcpy(metaData.matrix1, matrix1.M, sizeof(metaData.matrix1));
+	static_assert(sizeof(matrix2.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
+	memcpy(metaData.matrix2, matrix2.M, sizeof(metaData.matrix2));
 	sender->SetDescription(TCHAR_TO_ANSI(*spoutName.ToString()), &metaData, sizeof(metaData));
 	return result;
 }
 
-bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture, int64& frameNumber)
+bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture, int64& frameNumber, FMatrix& matrix1, FMatrix& matrix2)
 {
 	const FString SenderNameString = spoutName.GetPlainNameString();
 
@@ -600,7 +604,7 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 			int32 Stride = SenderStruct->w * 4;
 
 			ENQUEUE_RENDER_COMMAND(void)(
-				[SenderStruct, Stride, spoutName, &frameNumber](FRHICommandListImmediate& RHICmdList)
+				[SenderStruct, Stride, spoutName, &frameNumber, &matrix1, &matrix2](FRHICommandListImmediate& RHICmdList)
 				{
 					ID3D11Texture2D* t_texTemp = SenderStruct->texTemp;
 					ID3D11Texture2D* t_tex = (ID3D11Texture2D*)SenderStruct->sharedResource;
@@ -636,7 +640,13 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 
 					smode::SmodeSpoutMetaData metaData;
 					if (sender->GetDescription(TCHAR_TO_ANSI(*spoutName.ToString()), &metaData, sizeof(metaData)) && metaData.isValid())
+					{
 						frameNumber = metaData.frameNumber;
+						static_assert(sizeof(matrix1.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
+						memcpy(matrix1.M, metaData.matrix1, sizeof(metaData.matrix1));
+						static_assert(sizeof(matrix2.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
+						memcpy(matrix2.M, metaData.matrix2, sizeof(metaData.matrix2));
+					}
 
 				});
 
