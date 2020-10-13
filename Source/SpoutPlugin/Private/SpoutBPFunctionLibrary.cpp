@@ -429,7 +429,7 @@ ESpoutState CheckSenderState(FName spoutName){
 
 }
 
-bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, FMatrix matrix1, FMatrix matrix2, float targetGamma, int64 frameNumber /*= -1 */)
+bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, FMatrix matrix1, FMatrix matrix2, bool magicMutex, float targetGamma, int64 frameNumber /*= -1 */)
 {
 	if (sender == nullptr)
 	{
@@ -517,7 +517,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	FString fName = *spoutName.ToString();
 	
 	ENQUEUE_RENDER_COMMAND(void)(
-		[targetTex, baseTexture, SenderStruct, fName, matrix1, matrix2, frameNumber](FRHICommandListImmediate& RHICmdList)
+		[targetTex, baseTexture, SenderStruct, fName, matrix1, matrix2, frameNumber, magicMutex](FRHICommandListImmediate& RHICmdList)
 		{
 
 			D3D11_TEXTURE2D_DESC td;
@@ -528,8 +528,11 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 				smode::ScopedSpoutSharedMemoryLock _(TCHAR_TO_ANSI(*fName));
 				g_pImmediateContext->CopyResource(targetTex, baseTexture);
 				g_pImmediateContext->Flush();
-				SenderStruct->frame->SetNewFrame();
-				SenderStruct->frame->AllowTextureAccess(targetTex);
+        if (!magicMutex)
+        {
+          SenderStruct->frame->SetNewFrame();
+          SenderStruct->frame->AllowTextureAccess(targetTex);
+        }
 				if (sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */))
 				{
 					smode::SmodeSpoutMetaData metaData;
@@ -541,6 +544,11 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 					memcpy(metaData.matrix2, matrix2.M, sizeof(metaData.matrix2));
 					sender->SetDescription(TCHAR_TO_ANSI(*fName), &metaData, sizeof(metaData));
 				}
+        if (magicMutex)
+        {
+          SenderStruct->frame->AllowTextureAccess(targetTex);
+          SenderStruct->frame->SetNewFrame();
+        }
 			}
 		});
 	return true;
