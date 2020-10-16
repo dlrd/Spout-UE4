@@ -525,7 +525,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			// Smode Tech frame counter based copy
 			if (SenderStruct->frame->CheckTextureAccess(targetTex))
 			{
-				smode::ScopedSpoutSharedMemoryLock _(TCHAR_TO_ANSI(*fName));
+				//smode::ScopedSpoutSharedMemoryLock _(TCHAR_TO_ANSI(*fName));
 				g_pImmediateContext->CopyResource(targetTex, baseTexture);
 				g_pImmediateContext->Flush();
 				if (sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */))
