@@ -119,7 +119,7 @@ public:
 	static bool CreateRegisterSender(FName spoutName, ID3D11Texture2D* baseTexture);
 
 	UFUNCTION(BlueprintCallable, Category = "Spout", meta = (AdvancedDisplay = "2"))
-		static bool SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, FMatrix matrix1, FMatrix matrix2, float targetGamma = 2.2, int64 frameNumber = -1);
+		static bool SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, UTextureRenderTarget2D* internalRenderTarget, FMatrix matrix1, FMatrix matrix2, float targetGamma = 2.2, int64 frameNumber = -1);
 
 	UFUNCTION(BlueprintCallable, Category = "Spout")
 		static void CloseSender(FName spoutName);

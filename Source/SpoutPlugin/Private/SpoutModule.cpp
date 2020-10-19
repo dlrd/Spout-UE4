@@ -5,6 +5,7 @@
 
 #include "Core.h"
 #include "Modules/ModuleManager.h"
+#include "Interfaces/IPluginManager.h"
 //#include "IPluginManager.h"
 
 DEFINE_LOG_CATEGORY(SpoutUELog);
@@ -42,6 +43,10 @@ void FSpoutModule::StartupModule()
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ThirdPartyLibraryError", "Failed to load example third party library"));
 	}*/
 	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Cargado"));
+
+	// Maps virtual shader source directory to the plugin's actual shaders directory.
+	FString PluginShaderDir = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("SpoutPlugin"))->GetBaseDir(), TEXT("Shaders"));
+	AddShaderSourceDirectoryMapping(TEXT("/SpoutShaders"), PluginShaderDir);
 }
 
 //void FSpoutModule::ShutdownModule()

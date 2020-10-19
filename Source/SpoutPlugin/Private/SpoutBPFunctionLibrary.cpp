@@ -1,6 +1,7 @@
 #include "../Public/SpoutBPFunctionLibrary.h"
 #include "SpoutPluginPrivatePCH.h"
 #include "../Public/SpoutModule.h"
+#include "PixelShaderExample.h"
 
 // Smode Tech, add includes
 #include "SmodeSpoutMetaData.h"
@@ -429,7 +430,8 @@ ESpoutState CheckSenderState(FName spoutName){
 
 }
 
-bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, FMatrix matrix1, FMatrix matrix2, float targetGamma, int64 frameNumber /*= -1 */)
+bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, UTextureRenderTarget2D* internalRenderTarget,
+																					FMatrix projectionMatrix, FMatrix viewMatrix, float targetGamma, int64 frameNumber /*= -1 */)
 {
 	if (sender == nullptr)
 	{
@@ -443,13 +445,15 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 
 	ID3D11Texture2D* baseTexture = 0;
 	FSenderStruct* SenderStruct = 0;
-	
+	FTexture2DRHIRef unrealTexture;
+
 	switch (sendTextureFrom)
 	{
 	case ESpoutSendTextureFrom::GameViewport:
 	{
 		// add nullptr SmodeTech check
-		const auto* targetTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture().GetReference() : nullptr; // SModeTech check
+		unrealTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture() : nullptr; // SModeTech check
+		const auto* targetTexture = unrealTexture ? unrealTexture.GetReference() : nullptr; // SModeTech check
 		baseTexture = targetTexture ? (ID3D11Texture2D*)targetTexture->GetNativeResource() : nullptr;
 		break;
 	}
@@ -459,7 +463,8 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			return false;
 		}
 		textureRenderTarget2D->TargetGamma = targetGamma;
-		baseTexture = (ID3D11Texture2D*)textureRenderTarget2D->Resource->TextureRHI->GetTexture2D()->GetNativeResource();
+		unrealTexture = textureRenderTarget2D->Resource->TextureRHI->GetTexture2D();
+		baseTexture = (ID3D11Texture2D* )unrealTexture->GetNativeResource();
 		break;
 	default:
 		break;
@@ -517,8 +522,20 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	FString fName = *spoutName.ToString();
 	
 	ENQUEUE_RENDER_COMMAND(void)(
-		[targetTex, baseTexture, SenderStruct, fName, matrix1, matrix2, frameNumber](FRHICommandListImmediate& RHICmdList)
+		[targetTex, baseTexture, unrealTexture, internalRenderTarget, SenderStruct, fName, projectionMatrix, viewMatrix, frameNumber](FRHICommandListImmediate& RHICmdList)
 		{
+
+			check(IsInRenderingThread());
+
+			if (internalRenderTarget)
+			{
+				FShaderUsageExampleParameters DrawParameters(internalRenderTarget);
+				DrawParameters.InputTexture = unrealTexture;
+				DrawParameters.FrameNumber = 1664; // FIXME
+				DrawParameters.ProjectionMatrix = projectionMatrix;
+				DrawParameters.ViewMatrix = viewMatrix;
+				FPixelShaderExample::DrawToRenderTarget_RenderThread(RHICmdList, DrawParameters);
+			}
 
 			D3D11_TEXTURE2D_DESC td;
 			baseTexture->GetDesc(&td);
@@ -533,10 +550,10 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 					smode::SmodeSpoutMetaData metaData;
 					metaData.frameTime = std::chrono::high_resolution_clock::now();
 					metaData.frameNumber = frameNumber;
-					static_assert(sizeof(matrix1.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
-					memcpy(metaData.matrix1, matrix1.M, sizeof(metaData.matrix1));
-					static_assert(sizeof(matrix2.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
-					memcpy(metaData.matrix2, matrix2.M, sizeof(metaData.matrix2));
+					static_assert(sizeof(projectionMatrix.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
+					memcpy(metaData.matrix1, projectionMatrix.M, sizeof(metaData.matrix1));
+					static_assert(sizeof(viewMatrix.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
+					memcpy(metaData.matrix2, viewMatrix.M, sizeof(metaData.matrix2));
 					sender->SetDescription(TCHAR_TO_ANSI(*fName), &metaData, sizeof(metaData));
 				}
         SenderStruct->frame->AllowTextureAccess(targetTex);
