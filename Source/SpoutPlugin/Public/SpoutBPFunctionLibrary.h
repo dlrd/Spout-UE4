@@ -70,6 +70,8 @@ struct FSenderStruct
 		// Pointer to our Texture's resource
 		/*FTexture2DResource Smode Tech for Unreal 4.26*/FTextureResource* Texture2DResource;
 
+		
+
 		// Regions we need to update
 		FUpdateTextureRegion2D* UpdateRegions;
 
@@ -104,6 +106,32 @@ struct FSenderStruct
 
 	FSenderStruct(){
 
+	}
+
+
+	//////////////
+
+	FTexture2DRHIRef ReadbackTexture = nullptr;
+
+	void recreateReadbackTexture(const FIntPoint& FrameSize = FIntPoint(1920, 1080))
+	{
+		// perform cleanup on the read back texture
+		if (this->ReadbackTexture.IsValid())
+		{
+			this->ReadbackTexture.SafeRelease();
+			this->ReadbackTexture = nullptr;
+		}
+
+		// a resource creation structure
+		FRHIResourceCreateInfo CreateInfo;
+		// Recreate the read back texture
+		ReadbackTexture = RHICreateTexture2D(FrameSize.X, FrameSize.Y, PF_B8G8R8A8, 1, 1, TexCreate_CPUReadback, CreateInfo);
+	};
+
+	void cleanReadbackTexture()
+	{
+		this->ReadbackTexture.SafeRelease();
+		this->ReadbackTexture = nullptr;
 	}
 
 };

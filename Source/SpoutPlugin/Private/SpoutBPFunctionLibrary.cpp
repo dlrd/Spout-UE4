@@ -379,6 +379,7 @@ bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Textur
 	newFSenderStruc->spoutType = ESpoutType::Sender;
 	newFSenderStruc->SetHandle(sharedSendingHandle);
 	newFSenderStruc->activeTextures = sendingTexture;
+	newFSenderStruc->recreateReadbackTexture();
 
 	newFSenderStruc->MaterialInstanceColor = nullptr;
 	newFSenderStruc->TextureColor = nullptr;
@@ -521,12 +522,17 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	}
 	FString fName = *spoutName.ToString();
 	
+//	internalRenderTarget->Resource
+
+	//UTexture2D* NewTexture = internalRenderTarget->ConstructTexture2D(CreatePackage(NULL, TEXT("PKG")), "SPOUT", internalRenderTarget->GetMaskedFlags() | RF_Public | RF_Standalone, CTF_Default, NULL);
+
 	ENQUEUE_RENDER_COMMAND(void)(
 		[targetTex, baseTexture, unrealTexture, internalRenderTarget, SenderStruct, fName, projectionMatrix, viewMatrix, frameNumber](FRHICommandListImmediate& RHICmdList)
 		{
 
 			check(IsInRenderingThread());
 
+			ID3D11Texture2D* actualBaseTexture = baseTexture;
 			if (internalRenderTarget)
 			{
 				FShaderUsageExampleParameters DrawParameters(internalRenderTarget);
@@ -535,15 +541,57 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 				DrawParameters.ProjectionMatrix = projectionMatrix;
 				DrawParameters.ViewMatrix = viewMatrix;
 				FPixelShaderExample::DrawToRenderTarget_RenderThread(RHICmdList, DrawParameters);
+				//FTexture2DRHIRef rhiTexture = internalRenderTarget->GetRenderTargetResource()->GetRenderTargetTexture();
+				//FTexture2DRHIRef rhiTexture = (FTexture2DRHIRef&)internalRenderTarget->Resource->TextureRHI;
+				FTexture2DRHIRef rhiTexture = unrealTexture;
+				RHICmdList.CopyToResolveTarget(rhiTexture, SenderStruct->ReadbackTexture, FResolveParams());
+				//rhiTexture = SenderStruct->ReadbackTexture->GetTexture2D();
+
+				if (true)
+				{
+					int32 Width = 0, Height = 0;
+					void* Result = nullptr;
+					// Map the staging surface so we can copy the buffer for the NDI SDK to use
+					RHICmdList.MapStagingSurface(unrealTexture, Result, Width, Height);
+					/*
+					// If we don't have a draw result, ensure we send an empty frame and resize our frame
+					if (FrameSize != FIntPoint(Width, Height))
+					{
+						// send an empty frame over NDI to be able to cleanup the buffers
+						NDIlib_send_send_video_async_v2(p_send_instance, nullptr);
+
+						// Change the render target configuration based on what the RHI determines the size to be
+						ChangeRenderTargetConfiguration(FIntPoint(Width, Height), this->FrameRate);
+
+						// Set the draw result, to indicate whether the frame size is the same as the output texture size
+						DrawResult = false;
+					}*/
+
+					// unmap the staging surface
+					RHICmdList.UnmapStagingSurface(unrealTexture);
+				}
+
+				//FRHITexture* rhiTexture = internalRenderTarget->TextureReference.TextureReferenceRHI->GetReferencedTexture();
+				//internalRenderTarget->ConstructTexture2D()
+				//internalRenderTarget->UpdateResourceImmediate();
+/*				if (true)//!internalRenderTarget->Resource->TextureRHI)
+				{
+					internalRenderTarget->UpdateResource();
+					//FlushRenderingCommands();
+				}
+				FTexture2DRHIRef Texture2DRHI = internalRenderTarget->Resource->TextureRHI ? internalRenderTarget->Resource->TextureRHI->GetTexture2D() : nullptr;
+				if (Texture2DRHI)
+					actualBaseTexture = (ID3D11Texture2D*)Texture2DRHI->GetNativeResource();*/
+				actualBaseTexture = (ID3D11Texture2D*)rhiTexture->GetNativeResource();// NewTexture->Resource->TextureRHI->GetNativeResource();
 			}
 
 			D3D11_TEXTURE2D_DESC td;
-			baseTexture->GetDesc(&td);
+			actualBaseTexture->GetDesc(&td);
 			// Smode Tech frame counter based copy
 			if (SenderStruct->frame->CheckTextureAccess(targetTex))
 			{
 				//smode::ScopedSpoutSharedMemoryLock _(TCHAR_TO_ANSI(*fName));
-				g_pImmediateContext->CopyResource(targetTex, baseTexture);
+				g_pImmediateContext->CopyResource(targetTex, actualBaseTexture);
 				g_pImmediateContext->Flush();
 				if (sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */))
 				{
@@ -791,8 +839,13 @@ bool USpoutBPFunctionLibrary::UpdateRegisteredSpout(FName spoutName, ID3D11Textu
 	for (int32 Index = 0; Index != FSenders.Num(); ++Index)
 	{
 		if (FSenders[Index].sName == spoutName) {
-			FSenders[Index].SetW(desc.Width);
-			FSenders[Index].SetH(desc.Height);
+			if (FSenders[Index].w != desc.Width || FSenders[Index].h != desc.Height)
+			{
+				FSenders[Index].SetW(desc.Width);
+				FSenders[Index].SetH(desc.Height);
+				FSenders[Index].recreateReadbackTexture();
+			}
+			
 			FSenders[Index].SetName(spoutName);
 			FSenders[Index].bIsAlive = true;
 			FSenders[Index].spoutType = ESpoutType::Sender;
