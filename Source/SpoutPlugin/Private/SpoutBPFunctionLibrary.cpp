@@ -533,6 +533,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			check(IsInRenderingThread());
 
 			ID3D11Texture2D* actualBaseTexture = baseTexture;
+#if 0
 			if (internalRenderTarget)
 			{
 				FShaderUsageExampleParameters DrawParameters(internalRenderTarget);
@@ -584,6 +585,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 					actualBaseTexture = (ID3D11Texture2D*)Texture2DRHI->GetNativeResource();*/
 				actualBaseTexture = (ID3D11Texture2D*)rhiTexture->GetNativeResource();// NewTexture->Resource->TextureRHI->GetNativeResource();
 			}
+#endif // 0
 
 			D3D11_TEXTURE2D_DESC td;
 			actualBaseTexture->GetDesc(&td);
@@ -595,6 +597,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 				g_pImmediateContext->Flush();
 				if (sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */))
 				{
+#if 0
 					smode::SmodeSpoutMetaData metaData;
 					metaData.frameTime = std::chrono::high_resolution_clock::now();
 					metaData.frameNumber = frameNumber;
@@ -603,6 +606,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 					static_assert(sizeof(viewMatrix.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
 					memcpy(metaData.matrix2, viewMatrix.M, sizeof(metaData.matrix2));
 					sender->SetDescription(TCHAR_TO_ANSI(*fName), &metaData, sizeof(metaData));
+#endif // 0
 				}
         SenderStruct->frame->AllowTextureAccess(targetTex);
         SenderStruct->frame->SetNewFrame();
