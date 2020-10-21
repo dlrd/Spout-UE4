@@ -1,0 +1,79 @@
+struct Functions
+{
+  float4 metadataBit(int x, uint value)
+  {
+    float k = (int(value) & (1 << x)) != 0 ? 1.0 : 0.0;
+    return float4(k, k, k, 1.0);
+  }
+
+  float4 metadataPixel(float frameNumber, float4x4 projectionMatrix, float4x4 viewMatrix, int2 p, int2 s)
+  {
+    uint value;
+    if (p.y == 0)
+      value = uint(frameNumber);
+    else if (p.y <= 16)
+    {
+      int index = p.y - 1;
+      value = asuint(projectionMatrix[index % 4][index / 4]);
+    }
+    else
+    {
+      int index = p.y - 17;
+      value = asuint(viewMatrix[index % 4][index / 4]);
+    }
+    return metadataBit(p.x, value);
+  }
+  
+  int2 metadataSize()
+    {return int2(32, 33);}
+
+float4x4 AngleAxis3x3(float angle, float3 axis)
+{
+    float c, s;
+    sincos(angle, s, c);
+
+    float t = 1 - c;
+    float x = axis.x;
+    float y = axis.y;
+    float z = axis.z;
+
+    return float4x4(
+        t * x * x + c,      t * x * y - s * z,  t * x * z + s * y, 0,
+        t * x * y + s * z,  t * y * y + c,      t * y * z - s * x, 0,
+        t * x * z - s * y,  t * y * z + s * x,  t * z * z + c, 0,
+        0, 0, 0, 1
+    );
+}
+
+};
+Functions functions;
+
+int2 metadataPosition = int2(10, 10);
+int frameNumber = ResolvedView.FrameNumber;
+float4x4 projectionMatrix = ResolvedView.ViewToClip;
+
+float4x4 trans = float4x4(1,0,0,0,
+                          0,1,0,0,
+                          0,0,1,0,
+                          ResolvedView.PreViewTranslation.x, ResolvedView.PreViewTranslation.y,	ResolvedView.PreViewTranslation.z, 1); 
+float4x4 viewMatrix = mul(trans, ResolvedView.TranslatedWorldToCameraView);
+
+float4x4 unrealToSmode = float4x4(0.01, 0, 0, 0,
+				0, 0, 0.01, 0,
+                                0, 0.01, 0, 0,
+                                0, 0, 0, 1);
+
+float4x4 smodeToUnreal = float4x4(100, 0, 0, 0,
+				0, 0, 100, 0,
+                                0, 100, 0, 0,
+                                0, 0, 0, 1);
+float PI = 3.14159265;
+float4x4 rotate = functions.AngleAxis3x3(PI/2.0, float3(1, 0, 0));
+viewMatrix = mul( mul(mul(smodeToUnreal, viewMatrix), unrealToSmode), rotate);
+
+int2 p = int2(textureSize.x * uv.x, textureSize.y * uv.y) - metadataPosition;
+int2 s = functions.metadataSize();
+if (p.x >= 0 && p.y >= 0 && p.x < s.x && p.y < s.y)
+  return functions.metadataPixel(frameNumber, projectionMatrix, viewMatrix, p, s);
+else
+  return color;
