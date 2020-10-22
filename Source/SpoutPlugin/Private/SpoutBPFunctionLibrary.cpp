@@ -1,10 +1,8 @@
 #include "../Public/SpoutBPFunctionLibrary.h"
 #include "SpoutPluginPrivatePCH.h"
 #include "../Public/SpoutModule.h"
-#include "PixelShaderExample.h"
 
 // Smode Tech, add includes
-#include "SmodeSpoutMetaData.h"
 #include "SpoutSenderNames.h"
 
 #include <string>
@@ -379,7 +377,6 @@ bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Textur
 	newFSenderStruc->spoutType = ESpoutType::Sender;
 	newFSenderStruc->SetHandle(sharedSendingHandle);
 	newFSenderStruc->activeTextures = sendingTexture;
-	newFSenderStruc->recreateReadbackTexture();
 
 	newFSenderStruc->MaterialInstanceColor = nullptr;
 	newFSenderStruc->TextureColor = nullptr;
@@ -431,8 +428,7 @@ ESpoutState CheckSenderState(FName spoutName){
 
 }
 
-bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, UTextureRenderTarget2D* internalRenderTarget,
-																					FMatrix projectionMatrix, FMatrix viewMatrix, float targetGamma, int64 frameNumber /*= -1 */)
+bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, float targetGamma)
 {
 	if (sender == nullptr)
 	{
@@ -446,15 +442,13 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 
 	ID3D11Texture2D* baseTexture = 0;
 	FSenderStruct* SenderStruct = 0;
-	FTexture2DRHIRef unrealTexture;
-
+	
 	switch (sendTextureFrom)
 	{
 	case ESpoutSendTextureFrom::GameViewport:
 	{
 		// add nullptr SmodeTech check
-		unrealTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture() : nullptr; // SModeTech check
-		const auto* targetTexture = unrealTexture ? unrealTexture.GetReference() : nullptr; // SModeTech check
+		const auto* targetTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture().GetReference() : nullptr; // SModeTech check
 		baseTexture = targetTexture ? (ID3D11Texture2D*)targetTexture->GetNativeResource() : nullptr;
 		break;
 	}
@@ -464,8 +458,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			return false;
 		}
 		textureRenderTarget2D->TargetGamma = targetGamma;
-		unrealTexture = textureRenderTarget2D->Resource->TextureRHI->GetTexture2D();
-		baseTexture = (ID3D11Texture2D* )unrealTexture->GetNativeResource();
+		baseTexture = (ID3D11Texture2D*)textureRenderTarget2D->Resource->TextureRHI->GetTexture2D()->GetNativeResource();
 		break;
 	default:
 		break;
@@ -522,92 +515,18 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	}
 	FString fName = *spoutName.ToString();
 	
-//	internalRenderTarget->Resource
-
-	//UTexture2D* NewTexture = internalRenderTarget->ConstructTexture2D(CreatePackage(NULL, TEXT("PKG")), "SPOUT", internalRenderTarget->GetMaskedFlags() | RF_Public | RF_Standalone, CTF_Default, NULL);
-
 	ENQUEUE_RENDER_COMMAND(void)(
-		[targetTex, baseTexture, unrealTexture, internalRenderTarget, SenderStruct, fName, projectionMatrix, viewMatrix, frameNumber](FRHICommandListImmediate& RHICmdList)
+		[targetTex, baseTexture, SenderStruct, fName](FRHICommandListImmediate& RHICmdList)
 		{
 
-			check(IsInRenderingThread());
-
-			ID3D11Texture2D* actualBaseTexture = baseTexture;
-#if 0
-			if (internalRenderTarget)
-			{
-				FShaderUsageExampleParameters DrawParameters(internalRenderTarget);
-				DrawParameters.InputTexture = unrealTexture;
-				DrawParameters.FrameNumber = 1664; // FIXME
-				DrawParameters.ProjectionMatrix = projectionMatrix;
-				DrawParameters.ViewMatrix = viewMatrix;
-				FPixelShaderExample::DrawToRenderTarget_RenderThread(RHICmdList, DrawParameters);
-				//FTexture2DRHIRef rhiTexture = internalRenderTarget->GetRenderTargetResource()->GetRenderTargetTexture();
-				//FTexture2DRHIRef rhiTexture = (FTexture2DRHIRef&)internalRenderTarget->Resource->TextureRHI;
-				FTexture2DRHIRef rhiTexture = unrealTexture;
-				RHICmdList.CopyToResolveTarget(rhiTexture, SenderStruct->ReadbackTexture, FResolveParams());
-				//rhiTexture = SenderStruct->ReadbackTexture->GetTexture2D();
-
-				if (true)
-				{
-					int32 Width = 0, Height = 0;
-					void* Result = nullptr;
-					// Map the staging surface so we can copy the buffer for the NDI SDK to use
-					RHICmdList.MapStagingSurface(unrealTexture, Result, Width, Height);
-					/*
-					// If we don't have a draw result, ensure we send an empty frame and resize our frame
-					if (FrameSize != FIntPoint(Width, Height))
-					{
-						// send an empty frame over NDI to be able to cleanup the buffers
-						NDIlib_send_send_video_async_v2(p_send_instance, nullptr);
-
-						// Change the render target configuration based on what the RHI determines the size to be
-						ChangeRenderTargetConfiguration(FIntPoint(Width, Height), this->FrameRate);
-
-						// Set the draw result, to indicate whether the frame size is the same as the output texture size
-						DrawResult = false;
-					}*/
-
-					// unmap the staging surface
-					RHICmdList.UnmapStagingSurface(unrealTexture);
-				}
-
-				//FRHITexture* rhiTexture = internalRenderTarget->TextureReference.TextureReferenceRHI->GetReferencedTexture();
-				//internalRenderTarget->ConstructTexture2D()
-				//internalRenderTarget->UpdateResourceImmediate();
-/*				if (true)//!internalRenderTarget->Resource->TextureRHI)
-				{
-					internalRenderTarget->UpdateResource();
-					//FlushRenderingCommands();
-				}
-				FTexture2DRHIRef Texture2DRHI = internalRenderTarget->Resource->TextureRHI ? internalRenderTarget->Resource->TextureRHI->GetTexture2D() : nullptr;
-				if (Texture2DRHI)
-					actualBaseTexture = (ID3D11Texture2D*)Texture2DRHI->GetNativeResource();*/
-				actualBaseTexture = (ID3D11Texture2D*)rhiTexture->GetNativeResource();// NewTexture->Resource->TextureRHI->GetNativeResource();
-			}
-#endif // 0
-
 			D3D11_TEXTURE2D_DESC td;
-			actualBaseTexture->GetDesc(&td);
+			baseTexture->GetDesc(&td);
 			// Smode Tech frame counter based copy
 			if (SenderStruct->frame->CheckTextureAccess(targetTex))
 			{
-				//smode::ScopedSpoutSharedMemoryLock _(TCHAR_TO_ANSI(*fName));
-				g_pImmediateContext->CopyResource(targetTex, actualBaseTexture);
+				g_pImmediateContext->CopyResource(targetTex, baseTexture);
 				g_pImmediateContext->Flush();
-				if (sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */))
-				{
-#if 0
-					smode::SmodeSpoutMetaData metaData;
-					metaData.frameTime = std::chrono::high_resolution_clock::now();
-					metaData.frameNumber = frameNumber;
-					static_assert(sizeof(projectionMatrix.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
-					memcpy(metaData.matrix1, projectionMatrix.M, sizeof(metaData.matrix1));
-					static_assert(sizeof(viewMatrix.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
-					memcpy(metaData.matrix2, viewMatrix.M, sizeof(metaData.matrix2));
-					sender->SetDescription(TCHAR_TO_ANSI(*fName), &metaData, sizeof(metaData));
-#endif // 0
-				}
+				sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */);
         SenderStruct->frame->AllowTextureAccess(targetTex);
         SenderStruct->frame->SetNewFrame();
 			}
@@ -615,7 +534,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	return true;
 }
 
-bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture, int64& frameNumber, FMatrix& matrix1, FMatrix& matrix2)
+bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture)
 {
 	const FString SenderNameString = spoutName.GetPlainNameString();
 
@@ -673,7 +592,7 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 			int32 Stride = SenderStruct->w * 4;
 
 			ENQUEUE_RENDER_COMMAND(void)(
-				[SenderStruct, Stride, spoutName, &frameNumber, &matrix1, &matrix2](FRHICommandListImmediate& RHICmdList)
+				[SenderStruct, Stride, spoutName](FRHICommandListImmediate& RHICmdList)
 				{
 					ID3D11Texture2D* t_texTemp = SenderStruct->texTemp;
 					ID3D11Texture2D* t_tex = (ID3D11Texture2D*)SenderStruct->sharedResource;
@@ -709,17 +628,6 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 						mapped.RowPitch,
 						(uint8*)pixel
 					);
-
-					smode::SmodeSpoutMetaData metaData;
-					if (sender->GetDescription(TCHAR_TO_ANSI(*spoutName.ToString()), &metaData, sizeof(metaData)) && metaData.isValid())
-					{
-						frameNumber = metaData.frameNumber;
-						static_assert(sizeof(matrix1.M) == sizeof(metaData.matrix1), "Unexpected matrix size");
-						memcpy(matrix1.M, metaData.matrix1, sizeof(metaData.matrix1));
-						static_assert(sizeof(matrix2.M) == sizeof(metaData.matrix2), "Unexpected matrix size");
-						memcpy(matrix2.M, metaData.matrix2, sizeof(metaData.matrix2));
-					}
-
 				});
 
 			texture = SenderStruct->TextureColor;
@@ -843,13 +751,8 @@ bool USpoutBPFunctionLibrary::UpdateRegisteredSpout(FName spoutName, ID3D11Textu
 	for (int32 Index = 0; Index != FSenders.Num(); ++Index)
 	{
 		if (FSenders[Index].sName == spoutName) {
-			if (FSenders[Index].w != desc.Width || FSenders[Index].h != desc.Height)
-			{
-				FSenders[Index].SetW(desc.Width);
-				FSenders[Index].SetH(desc.Height);
-				FSenders[Index].recreateReadbackTexture();
-			}
-			
+			FSenders[Index].SetW(desc.Width);
+			FSenders[Index].SetH(desc.Height);
 			FSenders[Index].SetName(spoutName);
 			FSenders[Index].bIsAlive = true;
 			FSenders[Index].spoutType = ESpoutType::Sender;

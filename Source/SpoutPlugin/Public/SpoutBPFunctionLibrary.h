@@ -70,8 +70,6 @@ struct FSenderStruct
 		// Pointer to our Texture's resource
 		/*FTexture2DResource Smode Tech for Unreal 4.26*/FTextureResource* Texture2DResource;
 
-		
-
 		// Regions we need to update
 		FUpdateTextureRegion2D* UpdateRegions;
 
@@ -108,32 +106,6 @@ struct FSenderStruct
 
 	}
 
-
-	//////////////
-
-	FTexture2DRHIRef ReadbackTexture = nullptr;
-
-	void recreateReadbackTexture(const FIntPoint& FrameSize = FIntPoint(1920, 1080))
-	{
-		// perform cleanup on the read back texture
-		if (this->ReadbackTexture.IsValid())
-		{
-			this->ReadbackTexture.SafeRelease();
-			this->ReadbackTexture = nullptr;
-		}
-
-		// a resource creation structure
-		FRHIResourceCreateInfo CreateInfo;
-		// Recreate the read back texture
-		ReadbackTexture = RHICreateTexture2D(FrameSize.X, FrameSize.Y, PF_B8G8R8A8, 1, 1, TexCreate_CPUReadback, CreateInfo);
-	};
-
-	void cleanReadbackTexture()
-	{
-		this->ReadbackTexture.SafeRelease();
-		this->ReadbackTexture = nullptr;
-	}
-
 };
 
 
@@ -147,13 +119,13 @@ public:
 	static bool CreateRegisterSender(FName spoutName, ID3D11Texture2D* baseTexture);
 
 	UFUNCTION(BlueprintCallable, Category = "Spout", meta = (AdvancedDisplay = "2"))
-		static bool SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, UTextureRenderTarget2D* internalRenderTarget, FMatrix matrix1, FMatrix matrix2, float targetGamma = 2.2, int64 frameNumber = -1);
+		static bool SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, float targetGamma = 2.2);
 
 	UFUNCTION(BlueprintCallable, Category = "Spout")
 		static void CloseSender(FName spoutName);
 
 	UFUNCTION(BlueprintCallable, Category = "Spout")
-		static bool SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture, int64& frameNumber, FMatrix& matrix1, FMatrix& matrix2);
+		static bool SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture);
 	
 	UFUNCTION(BlueprintCallable, Category = "Spout")
 		static bool SpoutInfo(TArray<FSenderStruct>& Senders);

@@ -138,9 +138,6 @@ class SPOUT_DLLEXP spoutSenderNames {
 		bool setSharedInfo (const char* sendername, SharedTextureInfo* info);
 		// Test for shared info memory map existence
 		bool hasSharedInfo(const char* sendername);
-    // Smode Tech set description accessors
-    bool SetDescription(const char* sendername, const void* description, size_t size); 
-    bool GetDescription(const char* sendername, void* description, size_t size);
 
 		//
 		// Functions to maintain the active sender
