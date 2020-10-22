@@ -126,6 +126,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Spout")
 		static bool SpoutReceiver(const FName spoutName, UMaterialInstanceDynamic*& mat, UTexture2D*& texture);
+
+	UFUNCTION(BlueprintCallable, Category = "Spout")
+   	static bool SpoutReceiverWithFallback(const FName spoutName, UMaterialInstanceDynamic* fallbackMat, UTexture2D* fallbackTexture, UMaterialInstanceDynamic*& mat, UTexture2D*& texture);
 	
 	UFUNCTION(BlueprintCallable, Category = "Spout")
 		static bool SpoutInfo(TArray<FSenderStruct>& Senders);

@@ -616,13 +616,15 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 					BYTE *pixel = (BYTE *)mapped.pData;
 					g_pImmediateContext->Unmap(t_texTemp, 0);
 
-					//Update Texture
-					RHIUpdateTexture2D(
 #if ENGINE_MINOR_VERSION < 26 /* Smode hardcoded downcast for old Unreal 4.25 */
-						((FTexture2DResource* )(SenderStruct->Texture2DResource))->GetTexture2DRHI(),
+					FTexture2DRHIRef texture2D = ((FTexture2DResource*)(SenderStruct->Texture2DResource))->GetTexture2DRHI();
 #else
-						SenderStruct->Texture2DResource->GetTexture2DRHI(),
+					FTexture2DRHIRef texture2D = SenderStruct->Texture2DResource->GetTexture2DRHI();
 #endif
+					//Update Texture
+					if (texture2D)
+					  RHIUpdateTexture2D(
+						texture2D,
 						0,
 						*SenderStruct->UpdateRegions,
 						mapped.RowPitch,
@@ -636,6 +638,17 @@ bool USpoutBPFunctionLibrary::SpoutReceiver(const FName spoutName, UMaterialInst
 	}
 	
 	return true;
+}
+
+bool USpoutBPFunctionLibrary::SpoutReceiverWithFallback(const FName spoutName, UMaterialInstanceDynamic* fallbackMat, UTexture2D* fallbackTexture, UMaterialInstanceDynamic*& mat, UTexture2D*& texture)
+{
+	const bool res = SpoutReceiver(spoutName, mat, texture);
+	if (!res)
+	{
+		mat = fallbackMat;
+		texture = fallbackTexture;
+	}
+	return res;
 }
 
 void USpoutBPFunctionLibrary::CloseSender(FName spoutName)
