@@ -68,7 +68,7 @@ float4x4 unrealToSmodeProjection = float4x4(0.5, 0, 0, 0,
   0, -0.5, 0, 0,
   0, 0, 1, 0,
   0, 0, 0, 1); // todo : fix clip planes & center shift
-float4x4 projectionMatrix = ResolvedView.ViewToClip;
+float4x4 projectionMatrix = mul(unrealToSmodeProjection, ResolvedView.ViewToClip);
 
 
 float4x4 trans = float4x4(1, 0, 0, 0,
