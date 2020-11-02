@@ -8,6 +8,7 @@
 // - float4 color;
 // - float2 uv;
 // - float2 textureSize;
+// - float2 frameNumber;
 
 struct Functions
 {
@@ -62,7 +63,7 @@ struct Functions
 Functions functions;
 
 int2 metadataPosition = int2(10, 10);
-int frameNumber = ResolvedView.FrameNumber;
+// int frameNumber = ResolvedView.FrameNumber; // use Unreal frame number
 
 float4x4 unrealToSmodeProjection = float4x4(0.5, 0, 0, 0,
   0, -0.5, 0, 0,
