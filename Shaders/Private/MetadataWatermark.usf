@@ -75,9 +75,9 @@ float4x4 projectionMatrix = mul(unrealToSmodeProjection, ResolvedView.ViewToClip
 float4x4 trans = float4x4(1, 0, 0, 0,
   0, 1, 0, 0,
   0, 0, 1, 0,
-  ResolvedView.PreViewTranslation.x - positionOffset.x,
-  ResolvedView.PreViewTranslation.y - positionOffset.y,
-  ResolvedView.PreViewTranslation.z - positionOffset.z, 1);
+  ResolvedView.PreViewTranslation.x + positionOffset.x,
+  ResolvedView.PreViewTranslation.y + positionOffset.y,
+  ResolvedView.PreViewTranslation.z + positionOffset.z, 1);
 float4x4 viewMatrix = mul(trans, ResolvedView.TranslatedWorldToCameraView);
 
 float4x4 unrealToSmodeView = float4x4(0.01, 0, 0, 0,
