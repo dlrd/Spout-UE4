@@ -8,7 +8,7 @@
 // - float4 color;
 // - float2 uv;
 // - float2 textureSize;
-// - float2 frameNumber;
+// - float4 positionOffset (x,y,z);
 
 struct Functions
 {
@@ -75,7 +75,9 @@ float4x4 projectionMatrix = mul(unrealToSmodeProjection, ResolvedView.ViewToClip
 float4x4 trans = float4x4(1, 0, 0, 0,
   0, 1, 0, 0,
   0, 0, 1, 0,
-  ResolvedView.PreViewTranslation.x, ResolvedView.PreViewTranslation.y, ResolvedView.PreViewTranslation.z, 1);
+  ResolvedView.PreViewTranslation.x - positionOffset.x,
+  ResolvedView.PreViewTranslation.y - positionOffset.y,
+  ResolvedView.PreViewTranslation.z - positionOffset.z, 1);
 float4x4 viewMatrix = mul(trans, ResolvedView.TranslatedWorldToCameraView);
 
 float4x4 unrealToSmodeView = float4x4(0.01, 0, 0, 0,
@@ -94,6 +96,6 @@ viewMatrix = mul(mul(mul(smodeToUnrealView, viewMatrix), unrealToSmodeView), rot
 int2 p = int2(textureSize.x * uv.x, textureSize.y * uv.y) - metadataPosition;
 int2 s = functions.metadataSize();
 if (p.x >= 0 && p.y >= 0 && p.x < s.x && p.y < s.y)
-  return functions.metadataPixel(frameNumber, projectionMatrix, viewMatrix, p, s);
+  return functions.metadataPixel(ResolvedView.FrameNumber, projectionMatrix, viewMatrix, p, s);
 else
   return color;
