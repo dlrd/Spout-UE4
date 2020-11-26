@@ -738,7 +738,7 @@ bool USpoutBPFunctionLibrary::UpdateRegisteredSpout(FName spoutName, ID3D11Textu
 
 	D3D11_TEXTURE2D_DESC desc;
 	baseTexture->GetDesc(&desc);
-	ID3D11Texture2D * sendingTexture;
+	ID3D11Texture2D * sendingTexture = nullptr /* SMode Tech Crash*/;
 
 	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : ancho_%i, alto_%i"), desc.Width, desc.Height);
 	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : Format is %i"), int(desc.Format));
