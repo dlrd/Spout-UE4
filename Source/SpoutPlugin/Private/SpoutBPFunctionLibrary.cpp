@@ -522,7 +522,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			D3D11_TEXTURE2D_DESC td;
 			baseTexture->GetDesc(&td);
 			// Smode Tech frame counter based copy
-			if (SenderStruct->frame->CheckTextureAccess(targetTex))
+			if (SenderStruct->frame && SenderStruct->frame->CheckTextureAccess(targetTex))
 			{
 				g_pImmediateContext->CopyResource(targetTex, baseTexture);
 				g_pImmediateContext->Flush();
