@@ -1,4 +1,16 @@
 #include "../Public/SpoutBPFunctionLibrary.h"
+
+#if PLATFORM_WINDOWS
+#include "Windows/AllowWindowsPlatformTypes.h" // SMODE TECH, Fix UE 4.25
+#endif
+#include "SpoutDirectX.h" 
+#include "SpoutFrameCount.h" // Smode Tech
+#include <d3d11.h>
+#if PLATFORM_WINDOWS
+#include "Windows/HideWindowsPlatformTypes.h" // SMODE TECH, Fix UE 4.25
+#endif
+
+
 #include "SpoutPluginPrivatePCH.h"
 #include "../Public/SpoutModule.h"
 
@@ -458,7 +470,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			return false;
 		}
 		textureRenderTarget2D->TargetGamma = targetGamma;
-		baseTexture = (ID3D11Texture2D*)textureRenderTarget2D->Resource->TextureRHI->GetTexture2D()->GetNativeResource();
+		baseTexture = textureRenderTarget2D->Resource->TextureRHI.IsValid() ? (ID3D11Texture2D*)textureRenderTarget2D->Resource->TextureRHI->GetTexture2D()->GetNativeResource() : nullptr;
 		break;
 	default:
 		break;

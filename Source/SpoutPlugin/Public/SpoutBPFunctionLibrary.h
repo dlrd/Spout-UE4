@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0 // SMODE TECH
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h" // SMODE TECH, Fix UE 4.25
 #endif
@@ -9,6 +10,7 @@
 #if PLATFORM_WINDOWS
 #include "Windows/HideWindowsPlatformTypes.h" // SMODE TECH, Fix UE 4.25
 #endif
+#endif // 0
 
 #include "SpoutBPFunctionLibrary.generated.h"
 
@@ -34,6 +36,13 @@ enum class ESpoutSendTextureFrom : uint8
 	GameViewport,
 	TextureRenderTarget2D
 };
+
+struct ID3D11Texture2D;
+struct ID3D11Resource;
+struct ID3D11ShaderResourceView;
+struct ID3D11Texture2D;
+class spoutFrameCount;
+typedef void* HANDLE;
 
 USTRUCT(BlueprintType)
 struct FSenderStruct
