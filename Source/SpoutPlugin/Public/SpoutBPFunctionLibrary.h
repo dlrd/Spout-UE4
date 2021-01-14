@@ -44,6 +44,9 @@ struct ID3D11Texture2D;
 class spoutFrameCount;
 typedef void* HANDLE;
 
+enum DXGI_FORMAT;
+typedef enum DXGI_FORMAT DXGI_FORMAT;
+
 USTRUCT(BlueprintType)
 struct FSenderStruct
 {
@@ -125,7 +128,7 @@ class SPOUTPLUGIN_API USpoutBPFunctionLibrary : public UBlueprintFunctionLibrary
 
 public:
 
-	static bool CreateRegisterSender(FName spoutName, ID3D11Texture2D* baseTexture);
+	static bool CreateRegisterSender(FName spoutName, unsigned int width, unsigned int height, DXGI_FORMAT format);
 
 	UFUNCTION(BlueprintCallable, Category = "Spout", meta = (AdvancedDisplay = "2"))
 		static bool SpoutSender(FName spoutName, ESpoutSendTextureFrom sendTextureFrom, UTextureRenderTarget2D* textureRenderTarget2D, float targetGamma = 2.2);
@@ -154,5 +157,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Spout")
 		static UTextureRenderTarget2D* CreateTextureRenderTarget2D(int32 w=1024, int32 h=768, EPixelFormat pixelFormat= EPixelFormat::PF_B8G8R8A8, bool forceLinearGamma = true );
 
-	static bool UpdateRegisteredSpout(FName spoutName, ID3D11Texture2D* baseTexture);
+	static bool UpdateRegisteredSpout(FName spoutName, unsigned int width, unsigned int height, DXGI_FORMAT format);
 };

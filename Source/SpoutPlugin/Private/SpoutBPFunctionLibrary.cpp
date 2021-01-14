@@ -31,6 +31,10 @@ static spoutSenderNames * sender;
 //static spoutGLDXinterop * interop; // Smode Tech useless
 static spoutDirectX * sdx;
 
+
+#include "D3D11On12Interop.h" // SMODE TECH
+static FD3D11On12Interop dx12Interop; // Smode Tech
+
 static TArray<FSenderStruct> FSenders;
 
 static UMaterialInterface* BaseMaterial;
@@ -58,6 +62,14 @@ void FSpoutModule::ShutdownModule()
 		delete sdx;
 		sdx = nullptr;
 	}
+  
+  // SmodeTech
+  ENQUEUE_RENDER_COMMAND(void)(
+    [this](FRHICommandListImmediate& RHICmdList)
+    {return dx12Interop.releaseInterop(); }
+  );
+  FlushRenderingCommands(true);
+  // --
 
 	UE_LOG(SpoutUELog, Warning, TEXT("Modulo Spout Descargado"));
 }
@@ -168,10 +180,16 @@ void initSpout()
 
 void GetDevice()
 {
-	UE_LOG(SpoutUELog, Warning, TEXT("-----------> Set Graphics Device D3D11"));
+	//UE_LOG(SpoutUELog, Warning, TEXT("-----------> Set Graphics Device D3D11"));
 
-	g_D3D11Device = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
-	g_D3D11Device->GetImmediateContext(&g_pImmediateContext);
+  // SmodeTech
+  dx12Interop.createInterop(GDynamicRHI);
+  g_D3D11Device = dx12Interop.getDevice11();
+  g_pImmediateContext = dx12Interop.getDeviceContext11();
+  // --
+
+	//g_D3D11Device = (ID3D11Device*)GDynamicRHI->RHIGetNativeDevice();
+	//g_D3D11Device->GetImmediateContext(&g_pImmediateContext);
 }
 
 int32 USpoutBPFunctionLibrary::SetMaxSenders(int32 max){
@@ -334,7 +352,7 @@ bool USpoutBPFunctionLibrary::SpoutInfoFrom(FName spoutName, FSenderStruct& Send
 }
 
 
-bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Texture2D* baseTexture)
+bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, unsigned int width, unsigned int height, DXGI_FORMAT format)
 {
 
 	if (g_D3D11Device == nullptr || g_pImmediateContext == NULL){
@@ -347,20 +365,18 @@ bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Textur
 	bool updateResult = false;
 	bool senderResult = false;
 	
-	D3D11_TEXTURE2D_DESC desc;
-	baseTexture->GetDesc(&desc);
 	ID3D11Texture2D * sendingTexture = nullptr; // Smode Tech Fix Crash
 
-	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : width_%i, height_%i"), desc.Width, desc.Height);
-	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : Format is %i"), int(desc.Format));
+	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : width_%i, height_%i"), width, height);
+	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : Format is %i"), int(format));
 
 	//use the pixel format from basetexture (the native texture textureRenderTarget2D)
-	DXGI_FORMAT texFormat = desc.Format;
-	if (desc.Format == DXGI_FORMAT_B8G8R8A8_TYPELESS) {
+	DXGI_FORMAT texFormat = format;
+	if (format == DXGI_FORMAT_B8G8R8A8_TYPELESS) {
 		texFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
 	}
 	
-	texResult = sdx->CreateSharedDX11Texture(g_D3D11Device, desc.Width, desc.Height, texFormat, &sendingTexture, sharedSendingHandle);
+	texResult = sdx->CreateSharedDX11Texture(g_D3D11Device, width, height, texFormat, &sendingTexture, sharedSendingHandle);
 	UE_LOG(SpoutUELog, Warning, TEXT("Create shared Texture with SDX : %i"), texResult);
 
 	if (!texResult)
@@ -372,7 +388,7 @@ bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Textur
 	const auto tmp = spoutName.GetPlainNameString();
 	UE_LOG(SpoutUELog, Warning, TEXT("Created Sender: name --> %s"), *tmp);
 
-	senderResult = sender->CreateSender(TCHAR_TO_ANSI(*spoutName.ToString()), desc.Width, desc.Height, sharedSendingHandle, texFormat);
+	senderResult = sender->CreateSender(TCHAR_TO_ANSI(*spoutName.ToString()), width, height, sharedSendingHandle, texFormat);
 	UE_LOG(SpoutUELog, Warning, TEXT("Created sender DX11 with sender name : %s"), *tmp);
 
 	// remove old sender register
@@ -382,8 +398,8 @@ bool USpoutBPFunctionLibrary::CreateRegisterSender(FName spoutName, ID3D11Textur
 	// add new register
 	UE_LOG(SpoutUELog, Warning, TEXT("Adding Sender to Sender list"));
 	FSenderStruct* newFSenderStruc = new FSenderStruct();
-	newFSenderStruc->SetW(desc.Width);
-	newFSenderStruc->SetH(desc.Height);
+	newFSenderStruc->SetW(width);
+	newFSenderStruc->SetH(height);
 	newFSenderStruc->SetName(spoutName);
 	newFSenderStruc->bIsAlive = true;
 	newFSenderStruc->spoutType = ESpoutType::Sender;
@@ -452,7 +468,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 		GetDevice();
 	}
 
-	ID3D11Texture2D* baseTexture = 0;
+  FTexture2DRHIRef sentTexture;
 	FSenderStruct* SenderStruct = 0;
 	
 	switch (sendTextureFrom)
@@ -460,8 +476,7 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	case ESpoutSendTextureFrom::GameViewport:
 	{
 		// add nullptr SmodeTech check
-		const auto* targetTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture().GetReference() : nullptr; // SModeTech check
-		baseTexture = targetTexture ? (ID3D11Texture2D*)targetTexture->GetNativeResource() : nullptr;
+    sentTexture = GEngine && GEngine->GameViewport && GEngine->GameViewport->Viewport ? GEngine->GameViewport->Viewport->GetRenderTargetTexture().GetReference() : nullptr; // SModeTech check
 		break;
 	}
 	case ESpoutSendTextureFrom::TextureRenderTarget2D:
@@ -470,22 +485,25 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 			return false;
 		}
 		textureRenderTarget2D->TargetGamma = targetGamma;
-		baseTexture = textureRenderTarget2D->Resource->TextureRHI.IsValid() ? (ID3D11Texture2D*)textureRenderTarget2D->Resource->TextureRHI->GetTexture2D()->GetNativeResource() : nullptr;
+    sentTexture = textureRenderTarget2D->Resource->TextureRHI.IsValid() ? textureRenderTarget2D->Resource->TextureRHI->GetTexture2D() : nullptr;
 		break;
 	default:
 		break;
 	}
-
-	if (baseTexture == nullptr) {
-		UE_LOG(SpoutUELog, Warning, TEXT("baseTexture is null"));
+  
+	if (sentTexture == nullptr) {
+		UE_LOG(SpoutUELog, Warning, TEXT("sentTexture is null"));
 		return false;
 	}
+
+  unsigned int width, height;
+  DXGI_FORMAT format = dx12Interop.getTextureFormat(sentTexture, width, height);
 
 	ESpoutState state = CheckSenderState(spoutName);
 
 	if (state == ESpoutState::noEnoR || state == ESpoutState::noER) {
 		UE_LOG(SpoutUELog, Warning, TEXT("Creating and registering new Sender..."));
-		CreateRegisterSender(spoutName, baseTexture);
+		CreateRegisterSender(spoutName, width, height, format);
 		return false;
 	}
 	if (state == ESpoutState::EnoR) {
@@ -496,11 +514,9 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 		GetSpoutRegistred(spoutName, SenderStruct);
 		if (SenderStruct->spoutType == ESpoutType::Sender) {
 			// Check whether texture size has changed
-			D3D11_TEXTURE2D_DESC td;
-			baseTexture->GetDesc(&td);
-			if (td.Width != SenderStruct->w || td.Height != SenderStruct->h) {
+			if (width != SenderStruct->w || height != SenderStruct->h) {
 				UE_LOG(SpoutUELog, Warning, TEXT("Texture Size has changed, Updating registered spout: "), *spoutName.GetPlainNameString());
-				UpdateRegisteredSpout(spoutName, baseTexture);
+				UpdateRegisteredSpout(spoutName, width, height, format);
 				return false;
 			}
 		}
@@ -528,17 +544,23 @@ bool USpoutBPFunctionLibrary::SpoutSender(FName spoutName, ESpoutSendTextureFrom
 	FString fName = *spoutName.ToString();
 	
 	ENQUEUE_RENDER_COMMAND(void)(
-		[targetTex, baseTexture, SenderStruct, fName](FRHICommandListImmediate& RHICmdList)
+		[targetTex, sentTexture, SenderStruct, fName](FRHICommandListImmediate& RHICmdList)
 		{
 
-			D3D11_TEXTURE2D_DESC td;
-			baseTexture->GetDesc(&td);
+			//D3D11_TEXTURE2D_DESC td;
+			//baseTexture->GetDesc(&td);
 			// Smode Tech frame counter based copy
 			if (SenderStruct->frame && SenderStruct->frame->CheckTextureAccess(targetTex))
 			{
-				g_pImmediateContext->CopyResource(targetTex, baseTexture);
-				g_pImmediateContext->Flush();
-				sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */);
+          //g_pImmediateContext->CopyResource(targetTex, baseTexture);
+          //g_pImmediateContext->Flush();
+          //sender->UpdateSender(TCHAR_TO_ANSI(*fName), td.Width, td.Height, SenderStruct->sHandle, td.Format /** Smode Tech Fix Bad Texture Format */);
+
+        unsigned int width, height;
+        DXGI_FORMAT format = dx12Interop.getTextureFormat(sentTexture, width, height);
+        dx12Interop.copyToDx11Texture(sentTexture, targetTex);
+        sender->UpdateSender(TCHAR_TO_ANSI(*fName), width, height, SenderStruct->sHandle, format);
+
         SenderStruct->frame->AllowTextureAccess(targetTex);
         SenderStruct->frame->SetNewFrame();
 			}
@@ -741,27 +763,25 @@ void USpoutBPFunctionLibrary::CloseSender(FName spoutName)
 }
 
 
-bool USpoutBPFunctionLibrary::UpdateRegisteredSpout(FName spoutName, ID3D11Texture2D * baseTexture)
+bool USpoutBPFunctionLibrary::UpdateRegisteredSpout(FName spoutName, unsigned int width, unsigned int height, DXGI_FORMAT format)
 {
 	HANDLE sharedSendingHandle = NULL;
 	bool texResult = false;
 	bool updateResult = false;
 	bool senderResult = false;
 
-	D3D11_TEXTURE2D_DESC desc;
-	baseTexture->GetDesc(&desc);
 	ID3D11Texture2D * sendingTexture = nullptr /* SMode Tech Crash*/;
 
-	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : ancho_%i, alto_%i"), desc.Width, desc.Height);
-	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : Format is %i"), int(desc.Format));
+	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : ancho_%i, alto_%i"), width, height);
+	UE_LOG(SpoutUELog, Warning, TEXT("ID3D11Texture2D Info : Format is %i"), int(format));
 
 	//use the pixel format from basetexture (the native texture textureRenderTarget2D)
-	DXGI_FORMAT texFormat = desc.Format;
-	if (desc.Format == DXGI_FORMAT_B8G8R8A8_TYPELESS) {
+	DXGI_FORMAT texFormat = format;
+	if (format == DXGI_FORMAT_B8G8R8A8_TYPELESS) {
 		texFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
 	}
 
-	texResult = sdx->CreateSharedDX11Texture(g_D3D11Device, desc.Width, desc.Height, texFormat, &sendingTexture, sharedSendingHandle);
+	texResult = sdx->CreateSharedDX11Texture(g_D3D11Device, width, height, texFormat, &sendingTexture, sharedSendingHandle);
 	UE_LOG(SpoutUELog, Warning, TEXT("Create shared Texture with SDX : %i"), texResult);
 
 	if (!texResult)
@@ -776,8 +796,8 @@ bool USpoutBPFunctionLibrary::UpdateRegisteredSpout(FName spoutName, ID3D11Textu
 	for (int32 Index = 0; Index != FSenders.Num(); ++Index)
 	{
 		if (FSenders[Index].sName == spoutName) {
-			FSenders[Index].SetW(desc.Width);
-			FSenders[Index].SetH(desc.Height);
+			FSenders[Index].SetW(width);
+			FSenders[Index].SetH(height);
 			FSenders[Index].SetName(spoutName);
 			FSenders[Index].bIsAlive = true;
 			FSenders[Index].spoutType = ESpoutType::Sender;
