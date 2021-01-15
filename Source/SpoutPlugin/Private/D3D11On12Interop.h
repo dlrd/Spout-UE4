@@ -15,13 +15,12 @@ public:
   // to be called in render thread
   bool createInterop(FDynamicRHI* interopDynamicRHI) // = GDynamicRHI 
   {
-    this->dynamicRHI = interopDynamicRHI;
-    if (!dynamicRHI)
+    if (!interopDynamicRHI)
     {
       UE_LOG(SpoutUELog, Error, TEXT("No existing RHI :-( "));
       return false;
     }
-
+    this->dynamicRHI = interopDynamicRHI;
     FString RHIName = dynamicRHI->GetName();
 
     if (RHIName == TEXT("D3D11"))
@@ -48,23 +47,20 @@ public:
 
   void releaseInterop()
   {
-    if (dynamicRHI && dynamicRHI->GetName() == TEXT("D3D12"))
+    if (device11on12 != nullptr)
     {
-      if (device11on12 != nullptr)
-      {
-        device11on12->Release();
-        device11on12 = nullptr;
-      }
-      if (device11 != nullptr)
-      {
-        device11->Release();
-        device11 = nullptr;
-      }
-      if (deviceContext11 != nullptr)
-      {
-        deviceContext11->Release();
-        deviceContext11 = nullptr;
-      }
+      device11on12->Release();
+      device11on12 = nullptr;
+    }
+    if (device11 != nullptr)
+    {
+      device11->Release();
+      device11 = nullptr;
+    }
+    if (deviceContext11 != nullptr)
+    {
+      deviceContext11->Release();
+      deviceContext11 = nullptr;
     }
   }
 
