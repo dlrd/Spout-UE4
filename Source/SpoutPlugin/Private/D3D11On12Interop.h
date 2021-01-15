@@ -48,8 +48,7 @@ public:
 
   void releaseInterop()
   {
-    FString RHIName = dynamicRHI->GetName();
-    if (RHIName == TEXT("D3D12"))
+    if (dynamicRHI && dynamicRHI->GetName() == TEXT("D3D12"))
     {
       if (device11on12 != nullptr)
       {
